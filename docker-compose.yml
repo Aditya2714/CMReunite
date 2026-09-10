@@ -1,0 +1,61 @@
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - alumni_mongodb:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ml-service:
+    build: ./ML-Service
+    restart: unless-stopped
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+      DB_NAME: alumniDB
+      CORS_ORIGIN: http://backend:4000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  backend:
+    build: ./Backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4000
+      MONGODB_URI: mongodb://mongodb:27017/alumniDB
+      ML_SERVICE_URL: http://ml-service:5001
+      PUBLIC_API_URL: http://localhost:8080
+      CORS_ORIGIN: http://localhost:8080
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      JWT_EXPIRES_IN: 30m
+      JWT_COOKIE_EXPIRES_IN: 30
+      ADMIN_NAME: ${ADMIN_NAME:-CMRIT Admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+    volumes:
+      - alumni_uploads:/app/public/uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ml-service:
+        condition: service_started
+
+  frontend:
+    build: ./Frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  alumni_mongodb:
+  alumni_uploads:

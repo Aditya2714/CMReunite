@@ -1,0 +1,143 @@
+[
+  {
+    "target": {
+      "_id": "target-1",
+      "user": "target-user-1",
+      "branch": "CSE",
+      "domain": "Computer Science / Software",
+      "location": "Bengaluru",
+      "endYear": 2024,
+      "designation": "Software Engineer",
+      "skills": ["React", "Node.js", "MongoDB"]
+    },
+    "candidates": [
+      {
+        "_id": "candidate-1",
+        "user": "mentor-user-1",
+        "branch": "CSE",
+        "domain": "Computer Science / Software",
+        "location": "Bengaluru",
+        "endYear": 2018,
+        "designation": "Senior Software Engineer",
+        "skills": ["ReactJS", "Node", "AWS"]
+      },
+      {
+        "_id": "candidate-2",
+        "user": "finance-user-1",
+        "branch": "Commerce",
+        "domain": "Finance",
+        "location": "Delhi",
+        "endYear": 2022,
+        "designation": "Accountant",
+        "skills": ["Accounting", "Tax"]
+      }
+    ],
+    "relevantUserIds": ["mentor-user-1"]
+  },
+  {
+    "target": {
+      "_id": "target-2",
+      "user": "target-user-2",
+      "branch": "ISE",
+      "domain": "Data Science / AI / ML",
+      "location": "Pune",
+      "endYear": 2023,
+      "designation": "Data Analyst",
+      "skills": ["Python", "Machine Learning", "SQL"]
+    },
+    "candidates": [
+      {
+        "_id": "candidate-3",
+        "user": "data-user-1",
+        "branch": "ISE",
+        "domain": "Data Science / AI / ML",
+        "location": "Bengaluru",
+        "endYear": 2016,
+        "designation": "Data Science Lead",
+        "skills": ["Python", "ML", "SQL", "AWS"]
+      },
+      {
+        "_id": "candidate-4",
+        "user": "civil-user-1",
+        "branch": "Civil",
+        "domain": "Construction",
+        "location": "Pune",
+        "endYear": 2021,
+        "designation": "Site Engineer",
+        "skills": ["AutoCAD"]
+      }
+    ],
+    "relevantUserIds": ["data-user-1"]
+  },
+  {
+    "target": {
+      "_id": "target-3",
+      "user": "target-user-3",
+      "branch": "ECE",
+      "domain": "Embedded Systems",
+      "location": "Bengaluru",
+      "endYear": 2025,
+      "designation": "Graduate Engineer",
+      "skills": ["C", "Microcontrollers", "IoT"]
+    },
+    "candidates": [
+      {
+        "_id": "candidate-5",
+        "user": "mentor-user-3",
+        "branch": "ECE",
+        "domain": "Embedded Systems",
+        "location": "Bengaluru",
+        "endYear": 2012,
+        "designation": "Embedded Systems Architect",
+        "skills": ["RTOS", "Firmware"]
+      },
+      {
+        "_id": "candidate-6",
+        "user": "junior-user-3",
+        "branch": "Mechanical",
+        "domain": "Manufacturing",
+        "location": "Chennai",
+        "endYear": 2024,
+        "designation": "Trainee",
+        "skills": ["C", "Microcontrollers", "IoT"]
+      }
+    ],
+    "relevantUserIds": ["mentor-user-3"]
+  },
+  {
+    "target": {
+      "_id": "target-4",
+      "user": "target-user-4",
+      "branch": "CSE",
+      "domain": "Cloud Engineering",
+      "location": "Hyderabad",
+      "endYear": 2024,
+      "designation": "Cloud Engineer",
+      "skills": ["AWS", "Terraform", "Kubernetes"]
+    },
+    "candidates": [
+      {
+        "_id": "candidate-7",
+        "user": "cloud-mentor-4",
+        "branch": "CSE",
+        "domain": "Cloud Engineering",
+        "location": "Hyderabad",
+        "endYear": 2015,
+        "designation": "Platform Lead",
+        "skills": ["AWS", "Terraform", "Kubernetes"]
+      },
+      {
+        "_id": "candidate-8",
+        "user": "keyword-user-4",
+        "branch": "Civil",
+        "domain": "Technical Writing",
+        "location": "Delhi",
+        "endYear": 2023,
+        "designation": "Content Intern",
+        "skills": ["Writing"],
+        "bio": "Cloud Engineering Cloud Engineer CSE Hyderabad AWS Terraform Kubernetes"
+      }
+    ],
+    "relevantUserIds": ["cloud-mentor-4"]
+  }
+]

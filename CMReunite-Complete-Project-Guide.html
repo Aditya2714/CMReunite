@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Complete offline project guide for CMReunite Alumni Connect">
+  <title>CMReunite — Complete Project Guide</title>
+  <style>
+    :root {
+      --ink: #182039;
+      --muted: #65708a;
+      --paper: #f4f6fb;
+      --card: #fff;
+      --navy: #101936;
+      --indigo: #4f46e5;
+      --teal: #0f9f91;
+      --line: #dfe4ef;
+      --soft: #eef2ff;
+      --success: #047857;
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--paper); color: var(--ink); line-height: 1.65; }
+    a { color: var(--indigo); }
+    button, input { font: inherit; }
+    .skip { position: fixed; left: 1rem; top: -5rem; z-index: 50; background: white; padding: .8rem 1rem; border-radius: .7rem; }
+    .skip:focus { top: 1rem; }
+    .shell { min-height: 100vh; }
+    .sidebar {
+      position: fixed; inset: 0 auto 0 0; width: 285px; overflow-y: auto;
+      padding: 1.5rem 1rem; background: var(--navy); color: white; z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: .8rem; padding: .5rem; }
+    .logo { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: linear-gradient(135deg, var(--indigo), var(--teal)); font-weight: 900; }
+    .brand strong { display: block; font-size: 1.05rem; }
+    .brand small { color: #aeb9d4; }
+    .search { width: 100%; margin: 1.2rem 0; padding: .8rem .9rem; border: 1px solid #394362; border-radius: .8rem; background: #182343; color: white; outline: none; }
+    .search:focus { border-color: #73ddd2; box-shadow: 0 0 0 3px #0f9f9138; }
+    .nav-title { margin: 1.4rem .65rem .5rem; color: #7dd3c9; font-size: .7rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    nav a { display: block; padding: .62rem .7rem; border-radius: .65rem; color: #dbe3f6; text-decoration: none; font-size: .86rem; font-weight: 700; }
+    nav a:hover, nav a:focus { background: #263252; color: white; }
+    .main { margin-left: 285px; }
+    .hero {
+      min-height: 72vh; display: grid; place-items: center; padding: 4rem 6vw;
+      background: radial-gradient(circle at 80% 20%, #4f46e54a, transparent 30rem), linear-gradient(145deg, #101936, #172554);
+      color: white;
+    }
+    .hero-inner { width: min(1050px, 100%); }
+    .eyebrow { color: #75e2d6; font-size: .75rem; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { max-width: 900px; margin: .8rem 0 1.2rem; font-size: clamp(2.5rem, 6vw, 5rem); line-height: 1.02; letter-spacing: -.045em; }
+    .hero p { max-width: 760px; color: #c8d1e6; font-size: 1.08rem; font-weight: 600; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 2rem; }
+    .pill { display: inline-flex; padding: .5rem .8rem; border: 1px solid #ffffff2b; border-radius: 999px; background: #ffffff0d; font-size: .78rem; font-weight: 800; }
+    .content { width: min(1080px, calc(100% - 3rem)); margin: auto; padding: 3rem 0 7rem; }
+    .chapter { scroll-margin-top: 2rem; margin-bottom: 3rem; padding: 2rem; border: 1px solid var(--line); border-radius: 1.4rem; background: var(--card); box-shadow: 0 18px 50px -42px #263252; }
+    .chapter[hidden] { display: none; }
+    .chapter-number { color: var(--indigo); font-size: .72rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    h2 { margin: .35rem 0 1rem; font-size: clamp(1.7rem, 4vw, 2.5rem); line-height: 1.15; letter-spacing: -.025em; }
+    h3 { margin: 1.6rem 0 .6rem; font-size: 1.2rem; }
+    h4 { margin-bottom: .35rem; }
+    p { margin: .55rem 0; }
+    ul, ol { padding-left: 1.35rem; }
+    li + li { margin-top: .34rem; }
+    code { padding: .14rem .35rem; border-radius: .35rem; background: #eef1f7; color: #3730a3; }
+    pre { overflow-x: auto; padding: 1rem; border-radius: .9rem; background: #101936; color: #e6edf9; line-height: 1.5; }
+    pre code { padding: 0; background: none; color: inherit; }
+    .grid { display: grid; gap: 1rem; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .mini { padding: 1.1rem; border: 1px solid var(--line); border-radius: 1rem; background: #fbfcff; }
+    .mini h3, .mini h4 { margin-top: 0; }
+    .stat { padding: 1.2rem; border-radius: 1rem; background: var(--navy); color: white; }
+    .stat strong { display: block; font-size: 2rem; }
+    .stat span { color: #abb7d3; font-size: .8rem; font-weight: 700; }
+    .callout { margin: 1.2rem 0; padding: 1rem 1.1rem; border-left: 4px solid var(--teal); border-radius: 0 .8rem .8rem 0; background: #eafaf8; }
+    .warning { border-left-color: #d97706; background: #fff7e8; }
+    .diagram { overflow-x: auto; padding: 1rem; border: 1px solid var(--line); border-radius: 1rem; background: #f9fbff; }
+    .flow { display: flex; align-items: stretch; gap: .6rem; min-width: 720px; }
+    .node { flex: 1; display: grid; place-items: center; min-height: 90px; padding: .8rem; border-radius: .8rem; background: white; border: 2px solid #cfd6e7; text-align: center; font-weight: 800; }
+    .node.accent { border-color: #7c75ef; background: #f0efff; }
+    .arrow { display: grid; place-items: center; color: var(--teal); font-size: 1.5rem; font-weight: 900; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .9rem; }
+    th, td { padding: .7rem .75rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #f1f4fa; font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
+    .badge { display: inline-flex; padding: .2rem .5rem; border-radius: 999px; background: #dcfce7; color: var(--success); font-size: .72rem; font-weight: 900; }
+    .no-results { display: none; margin: 2rem 0; padding: 2rem; text-align: center; border: 1px dashed #aeb7c9; border-radius: 1rem; }
+    .toolbar { position: fixed; right: 1rem; bottom: 1rem; z-index: 15; display: flex; gap: .5rem; }
+    .toolbar button { border: 0; border-radius: 999px; padding: .75rem 1rem; background: var(--indigo); color: white; box-shadow: 0 8px 25px #312e8160; cursor: pointer; font-weight: 800; }
+    .mobile-nav { display: none; }
+    footer { padding: 2rem; background: #0c132a; color: #9ca8c4; text-align: center; }
+    mark { border-radius: .2rem; background: #fde68a; }
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); transition: transform .2s ease; }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .mobile-nav { display: block; position: fixed; left: 1rem; top: 1rem; z-index: 30; border: 0; border-radius: .7rem; padding: .7rem .8rem; background: white; box-shadow: 0 5px 20px #0002; }
+      .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .hero { padding: 5rem 1.5rem 3rem; }
+      .content { width: min(100% - 1.2rem, 1080px); }
+      .chapter { padding: 1.25rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+    @media print {
+      .sidebar, .mobile-nav, .toolbar, .skip { display: none !important; }
+      .main { margin: 0; }
+      .hero { min-height: auto; color: black; background: white; padding: 2rem 0; }
+      .hero p { color: #333; }
+      .content { width: 100%; padding: 0; }
+      .chapter { break-inside: avoid; box-shadow: none; border: 0; border-top: 1px solid #bbb; border-radius: 0; padding: 1.3rem 0; margin: 0; }
+      .chapter[hidden] { display: block; }
+      a { color: black; text-decoration: none; }
+      footer { background: white; color: #333; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#content">Skip to documentation</a>
+  <button class="mobile-nav" type="button" aria-label="Open chapter navigation" onclick="toggleNav()">☰ Chapters</button>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="logo">CMR</div><div><strong>CMReunite</strong><small>Complete project guide</small></div></div>
+    <input class="search" id="search" type="search" placeholder="Search documentation…" aria-label="Search documentation">
+    <nav>
+      <p class="nav-title">Overview</p>
+      <a href="#overview">1. Project overview</a>
+      <a href="#requirements">2. Requirements</a>
+      <a href="#architecture">3. Architecture</a>
+      <a href="#database">4. Database</a>
+      <p class="nav-title">Implementation</p>
+      <a href="#features">5. Feature catalogue</a>
+      <a href="#assistant">6. Assistant & graph</a>
+      <a href="#ml">7. Recommendation ML</a>
+      <a href="#security">8. Security & privacy</a>
+      <a href="#api">9. API guide</a>
+      <p class="nav-title">Delivery</p>
+      <a href="#testing">10. Testing</a>
+      <a href="#setup">11. Setup on macOS</a>
+      <a href="#manual">12. User manual</a>
+      <a href="#demo">13. Demo & viva</a>
+      <a href="#limitations">14. Limitations</a>
+      <a href="#changes">15. Complete change summary</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="hero">
+      <div class="hero-inner">
+        <p class="eyebrow">Final-year project handbook · Offline edition</p>
+        <h1>CMReunite Alumni Connect</h1>
+        <p>An intelligent, explainable and privacy-aware alumni engagement platform combining secure full-stack workflows, real-time communication, graph discovery and purpose-specific recommendations.</p>
+        <div class="hero-meta">
+          <span class="pill">React PWA</span><span class="pill">Express + Socket.IO</span>
+          <span class="pill">MongoDB</span><span class="pill">Flask + scikit-learn</span>
+          <span class="pill">22 backend tests</span><span class="pill">11 browser tests</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+      <div class="no-results" id="noResults"><h2>No matching chapter</h2><p>Try a broader word such as “security”, “mentorship”, “MongoDB” or “testing”.</p></div>
+
+      <section class="chapter" id="overview">
+        <span class="chapter-number">Chapter 01</span><h2>Project overview</h2>
+        <h3>Problem statement</h3>
+        <p>Alumni information is commonly fragmented across spreadsheets, social groups and outdated portals. Students and graduates cannot easily identify relevant mentors or referral contacts, while institutions lack verified engagement data and measurable outcomes.</p>
+        <h3>Proposed solution</h3>
+        <p>CMReunite converts static alumni records into an active professional network. It combines verified profiles with accountable mentorship, referrals, events, messaging, recommendations, graph discovery, privacy controls, institutional analytics and secure account management.</p>
+        <div class="grid three">
+          <article class="mini"><h4>People</h4><p>Verified alumni discovery, connections, messages and graph paths.</p></article>
+          <article class="mini"><h4>Outcomes</h4><p>Mentorship milestones, referral pipeline, event participation and analytics.</p></article>
+          <article class="mini"><h4>Intelligence</h4><p>Grounded assistant and explainable purpose-specific matching.</p></article>
+        </div>
+        <h3>Objectives</h3>
+        <ol>
+          <li>Maintain a verified, searchable and privacy-aware alumni network.</li>
+          <li>Provide structured mentorship, referral and engagement workflows.</li>
+          <li>Produce transparent recommendations backed by profile evidence.</li>
+          <li>Protect credentials, sessions and personal-data choices.</li>
+          <li>Give administrators measurable, database-derived engagement insights.</li>
+          <li>Deliver a testable, documented and deployable final-year system.</li>
+        </ol>
+        <h3>Technology stack</h3>
+        <table><thead><tr><th>Layer</th><th>Technology</th><th>Responsibility</th></tr></thead><tbody>
+          <tr><td>Frontend</td><td>React, Redux Toolkit, Tailwind, Vite</td><td>Responsive PWA and protected routes</td></tr>
+          <tr><td>Backend</td><td>Node.js, Express, Mongoose, Zod</td><td>Policy, validation and workflows</td></tr>
+          <tr><td>Real time</td><td>Socket.IO</td><td>Live messages and notifications</td></tr>
+          <tr><td>Database</td><td>MongoDB</td><td>Identity, profiles and engagement data</td></tr>
+          <tr><td>ML</td><td>Flask, scikit-learn, NumPy</td><td>Explainable ranking and evaluation</td></tr>
+        </tbody></table>
+      </section>
+
+      <section class="chapter" id="requirements">
+        <span class="chapter-number">Chapter 02</span><h2>Requirements and actors</h2>
+        <div class="grid two">
+          <article class="mini"><h3>Alumni</h3><ul><li>Register and maintain profile</li><li>Discover and connect</li><li>Message permitted members</li><li>Request/provide mentorship</li><li>Track referrals and events</li><li>Control privacy and sessions</li></ul></article>
+          <article class="mini"><h3>Administrator</h3><ul><li>Verify registrations</li><li>Manage records and content</li><li>Oversee workflows</li><li>Inspect live analytics</li><li>Export engagement reports</li></ul></article>
+        </div>
+        <h3>Key functional requirements</h3>
+        <ul>
+          <li>OTP registration and approval-controlled access.</li>
+          <li>Search by name, batch, branch, skill, company, role and location.</li>
+          <li>Connection, message, mentorship and referral lifecycle management.</li>
+          <li>Grounded natural-language discovery and confirmed assistant actions.</li>
+          <li>Network visualization with mutuals and shortest paths.</li>
+          <li>Purpose-specific recommendations with reasons and feedback.</li>
+          <li>Live MongoDB analytics, notifications and exportable reports.</li>
+          <li>Enforceable privacy, personal-data export and revocable sessions.</li>
+        </ul>
+        <h3>Non-functional requirements</h3>
+        <table><tbody>
+          <tr><th>Security</th><td>bcrypt, HTTP-only cookies, server sessions, role/ownership checks, validation and rate limits</td></tr>
+          <tr><th>Usability</th><td>Responsive UI, keyboard controls, skip navigation and reduced motion</td></tr>
+          <tr><th>Reliability</th><td>Structured errors, persistent messages, health checks and automated tests</td></tr>
+          <tr><th>Explainability</th><td>Recommendation signals, reasons, version and reproducible metrics</td></tr>
+          <tr><th>Deployability</th><td>Environment configuration, production build, PWA and optional containers</td></tr>
+        </tbody></table>
+      </section>
+
+      <section class="chapter" id="architecture">
+        <span class="chapter-number">Chapter 03</span><h2>System architecture</h2>
+        <div class="diagram" role="img" aria-label="CMReunite component architecture">
+          <div class="flow">
+            <div class="node accent">React PWA<br><small>UI + offline shell</small></div><div class="arrow">→</div>
+            <div class="node accent">Express API<br><small>Auth + workflows</small></div><div class="arrow">→</div>
+            <div class="node">MongoDB<br><small>Source of truth</small></div>
+            <div class="arrow">↔</div><div class="node">Flask ML<br><small>Ranking</small></div>
+          </div>
+        </div>
+        <p>Socket.IO connects the React client and Express server for real-time delivery. The backend also communicates with the configured email provider and a process-local background queue.</p>
+        <h3>Request trust boundary</h3>
+        <ol>
+          <li>Browser sends an HTTP-only JWT cookie.</li>
+          <li>Middleware verifies signature and expiration.</li>
+          <li>The JWT <code>jti</code> must match an active server-side session.</li>
+          <li>The user must still exist and be approved.</li>
+          <li>Role, resource ownership, privacy and blocking are checked.</li>
+          <li>Validated data reaches the model and database layers.</li>
+        </ol>
+        <h3>PWA behavior</h3>
+        <p>The production build registers a service worker that caches the navigation shell and static assets. Private API responses are deliberately excluded. Offline users receive a dedicated fallback page; mutations remain online-only.</p>
+      </section>
+
+      <section class="chapter" id="database">
+        <span class="chapter-number">Chapter 04</span><h2>Database design</h2>
+        <div class="grid three">
+          <article class="mini"><h4>User</h4><p>Identity, bcrypt password, approval, privacy, notifications, blocking and reset security.</p></article>
+          <article class="mini"><h4>Alumni</h4><p>Academic, career, skills, bio, social links, verification and uploads.</p></article>
+          <article class="mini"><h4>AuthSession</h4><p>JWT identifier, device, IP, activity, expiry and revocation.</p></article>
+          <article class="mini"><h4>Connection</h4><p>Requester, recipient, message and relationship state.</p></article>
+          <article class="mini"><h4>Mentorship</h4><p>Goals, scheduling, milestones, notes, completion and feedback.</p></article>
+          <article class="mini"><h4>Referral</h4><p>Role/company request, assignee, pipeline and status history.</p></article>
+          <article class="mini"><h4>EventRegistration</h4><p>Capacity outcome, waitlist, attendance and check-in metadata.</p></article>
+          <article class="mini"><h4>Conversation / Message</h4><p>Participants, message body, timestamps and read state.</p></article>
+          <article class="mini"><h4>Notification</h4><p>Category, content, link, read state and idempotent reminder key.</p></article>
+        </div>
+        <h3>Important relationships</h3>
+        <pre><code>User 1 ── 0..1 Alumni
+User 1 ── 0..* AuthSession
+User * ── * User through Connection
+User 1 ── 0..* Mentorship (requester/mentor)
+User 1 ── 0..* Referral (requester/assignee)
+Event 1 ── 0..* EventRegistration
+Conversation 1 ── 0..* Message</code></pre>
+        <h3>Data integrity</h3>
+        <ul><li>Unique connection pairs and event-user registrations.</li><li>TTL cleanup for expired authentication sessions.</li><li>Text and compound indexes for common alumni queries.</li><li>Unique reminder keys prevent duplicate reminders.</li><li>Credential/reset fields are excluded from default reads.</li></ul>
+      </section>
+
+      <section class="chapter" id="features">
+        <span class="chapter-number">Chapter 05</span><h2>Complete feature catalogue</h2>
+        <div class="grid two">
+          <article class="mini"><h3>Onboarding</h3><p>Email OTP, alumni-only public registration, admin approval/rejection and verified profiles.</p></article>
+          <article class="mini"><h3>Profiles & directory</h3><p>Education, career, skills, search filters, image upload and privacy-aware contact redaction.</p></article>
+          <article class="mini"><h3>Connections & messages</h3><p>Requests, acceptance, blocking, stored conversations, read state and live Socket.IO delivery.</p></article>
+          <article class="mini"><h3>Mentorship</h3><p>Mentor discovery, goals, outcomes, scheduling, milestones, progress notes, completion and ratings.</p></article>
+          <article class="mini"><h3>Referrals</h3><p>Role/company requests, links, deadlines and requested → review → referred → interview → outcome pipeline.</p></article>
+          <article class="mini"><h3>Events & content</h3><p>Capacity, waitlist, attendance, jobs, announcements, recognition, stories, forums and resources.</p></article>
+          <article class="mini"><h3>Notifications</h3><p>Category/unread filters, channel/digest settings, quiet hours and 48-hour reminders.</p></article>
+          <article class="mini"><h3>Analytics</h3><p>Live users, approvals, connections, mentoring, referrals, attendance, messages and growth charts.</p></article>
+          <article class="mini"><h3>Privacy & trust</h3><p>Visibility, contact fields, message/connection rules, mentor availability, blocking and data export.</p></article>
+          <article class="mini"><h3>Account security</h3><p>Password change/recovery, login history, device revocation and logout-all.</p></article>
+          <article class="mini"><h3>PWA</h3><p>Installable production application, offline shell, reduced motion and accessible navigation.</p></article>
+          <article class="mini"><h3>Presentation mode</h3><p>A guided <code>/demo</code> narrative with architecture, evidence and live feature sequence.</p></article>
+        </div>
+      </section>
+
+      <section class="chapter" id="assistant">
+        <span class="chapter-number">Chapter 06</span><h2>Grounded assistant and graph intelligence</h2>
+        <h3>Assistant pipeline</h3>
+        <div class="diagram"><div class="flow">
+          <div class="node">Question</div><div class="arrow">→</div><div class="node">Intent + years + keywords</div><div class="arrow">→</div><div class="node accent">Privacy-aware profile scoring</div><div class="arrow">→</div><div class="node">Evidence + actions</div>
+        </div></div>
+        <p>The assistant does not fabricate people or depend on a paid AI key. It searches stored alumni attributes and shows which field matched. Recent conversation is retained in the UI.</p>
+        <div class="callout"><strong>Action safety:</strong> a mutation first returns a named confirmation preview. Only a second confirmed request can create a connection, and the backend rechecks self-action, duplicates, privacy and blocking.</div>
+        <h3>Graph model</h3>
+        <ul><li>Solid edges represent accepted connections.</li><li>Dotted discovery edges represent a shared company or branch.</li><li>Breadth-first search produces the minimum-hop accepted path.</li><li>Neighbour-set intersection calculates mutual connections.</li><li>Users can search, filter, zoom, pan and inspect profiles.</li></ul>
+      </section>
+
+      <section class="chapter" id="ml">
+        <span class="chapter-number">Chapter 07</span><h2>Explainable recommendation engine</h2>
+        <pre><code>score =
+  semantic_text × mode_text_weight +
+  skill_jaccard × mode_skill_weight +
+  domain_match × mode_domain_weight +
+  branch_match × mode_branch_weight +
+  location_match × mode_location_weight +
+  experience_score × mode_experience_weight +
+  bounded_feedback_adjustment</code></pre>
+        <h3>Signals</h3>
+        <ul><li>Word and character n-gram TF-IDF cosine similarity</li><li>Normalized skill aliases and Jaccard similarity</li><li>Domain, branch and location exact matches</li><li>Graduation-year experience compatibility</li><li>Explicit relevant, irrelevant, hidden and conversion feedback</li></ul>
+        <h3>Measured starter benchmark</h3>
+        <table><thead><tr><th>Model</th><th>Precision@1</th><th>Recall@1</th><th>MRR</th><th>NDCG@1</th></tr></thead><tbody>
+          <tr><td>Skills only</td><td>0.75</td><td>0.75</td><td>0.875</td><td>0.75</td></tr>
+          <tr><td>Content only</td><td>1.00</td><td>1.00</td><td>1.00</td><td>1.00</td></tr>
+          <tr><td>Hybrid adaptive</td><td>1.00</td><td>1.00</td><td>1.00</td><td>1.00</td></tr>
+        </tbody></table>
+        <div class="callout warning"><strong>Validity warning:</strong> these values come from four labelled mentor scenarios. They demonstrate the evaluation pipeline but are not a statistically generalizable accuracy claim. A defensible study needs 50–100+ independently judged scenarios across all modes.</div>
+      </section>
+
+      <section class="chapter" id="security">
+        <span class="chapter-number">Chapter 08</span><h2>Security and privacy</h2>
+        <table><thead><tr><th>Risk</th><th>Control</th></tr></thead><tbody>
+          <tr><td>Password exposure</td><td>bcrypt hashes, default field exclusion and safe DTOs</td></tr>
+          <tr><td>Account enumeration</td><td>Generic password-recovery response</td></tr>
+          <tr><td>Reset token theft</td><td>Random token, SHA-256 hash at rest, 15-minute expiry and single use</td></tr>
+          <tr><td>Stolen session</td><td>JWT <code>jti</code>, server-side session, revocation and logout-all</td></tr>
+          <tr><td>Privilege escalation</td><td>Role and resource-ownership authorization</td></tr>
+          <tr><td>Personal-data leakage</td><td>Backend visibility filters, redaction, blocking and data export</td></tr>
+          <tr><td>Brute force</td><td>Rate limiting on login, OTP, registration and password endpoints</td></tr>
+          <tr><td>Unsafe input</td><td>Zod/schema validation, body limits and bounded uploads</td></tr>
+          <tr><td>Unconfirmed automation</td><td>Assistant preview/confirmation protocol</td></tr>
+        </tbody></table>
+        <h3>Secure password recovery</h3>
+        <ol><li>User submits email and always receives the same response.</li><li>Approved account gets a random raw token by email.</li><li>Only a SHA-256 hash and expiry are stored.</li><li>Reset validates hash/expiry and bcrypt-hashes the new password.</li><li>Token fields are cleared and all sessions revoked.</li></ol>
+        <h3>Production recommendations</h3>
+        <p>Use HTTPS, managed secrets, least-privilege MongoDB, private object storage, malware scanning, Redis/durable workers, centralized audit logs, backups, CSRF hardening, dependency scanning, load tests and an independent penetration test.</p>
+      </section>
+
+      <section class="chapter" id="api">
+        <span class="chapter-number">Chapter 09</span><h2>API guide</h2>
+        <p>Local API: <code>http://127.0.0.1:4000</code>. Authentication uses an HTTP-only <code>jwt</code> cookie. The machine-readable OpenAPI contract is stored at <code>Backend/docs/openapi.yaml</code>.</p>
+        <table><thead><tr><th>Area</th><th>Important endpoints</th></tr></thead><tbody>
+          <tr><td>Authentication</td><td><code>/auth/login</code>, <code>/auth/me</code>, <code>/auth/sessions</code>, <code>/auth/change-password</code>, <code>/auth/forgot-password</code></td></tr>
+          <tr><td>Profiles</td><td><code>/profile/me</code>, <code>/profile/privacy</code>, <code>/profile/export</code>, <code>/alumni</code></td></tr>
+          <tr><td>Relationships</td><td><code>/connections</code>, <code>/messages</code>, <code>/network/graph</code></td></tr>
+          <tr><td>Workflows</td><td><code>/mentorship</code>, <code>/mentorship/{id}/progress</code>, <code>/referrals</code>, <code>/event</code></td></tr>
+          <tr><td>Intelligence</td><td><code>/assistant/query</code>, <code>/assistant/action</code>, <code>/ml/recommendations</code>, <code>/ml/evaluation</code></td></tr>
+          <tr><td>Administration</td><td><code>/admin/overview</code>, <code>/admin/reports/export</code>, <code>/admin/pending-alumni</code></td></tr>
+        </tbody></table>
+        <pre><code>curl -c cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alumni@example.com","password":"StrongPass123!","role":"alumni"}' \
+  http://127.0.0.1:4000/auth/login
+
+curl -b cookies.txt http://127.0.0.1:4000/profile/activity-summary</code></pre>
+      </section>
+
+      <section class="chapter" id="testing">
+        <span class="chapter-number">Chapter 10</span><h2>Testing and measured evidence</h2>
+        <div class="grid three">
+          <div class="stat"><strong>22/22</strong><span>Backend unit tests</span></div>
+          <div class="stat"><strong>6/6</strong><span>Database integration tests</span></div>
+          <div class="stat"><strong>9/9</strong><span>ML tests</span></div>
+          <div class="stat"><strong>11/11</strong><span>Browser end-to-end tests</span></div>
+          <div class="stat"><strong>Passed</strong><span>Frontend lint</span></div>
+          <div class="stat"><strong>Passed</strong><span>Production build</span></div>
+        </div>
+        <h3>Covered behavior</h3>
+        <p>Passwords, sessions, serializers, authorization, validation, privacy defaults, notification defaults, mentorship, referral states, events, messages, assistant parsing, recommendations, benchmark metrics, login, recovery, graph, privacy, messaging and presentation mode.</p>
+        <h3>Commands</h3>
+        <pre><code>cd Backend && npm test
+cd Backend && npm run test:integration
+cd ML-Service && .venv/bin/python -m unittest discover -s tests -v
+cd Frontend && npm run lint && npm run build
+cd Frontend && npm run test:e2e</code></pre>
+        <div class="callout"><strong>Evidence rule:</strong> retain terminal output and screenshots. Never invent load, adoption, accuracy or security-test results.</div>
+      </section>
+
+      <section class="chapter" id="setup">
+        <span class="chapter-number">Chapter 11</span><h2>Run the project on macOS</h2>
+        <h3>Prerequisites</h3><p>Node.js 20+, Python 3.11+, npm and MongoDB Community or Atlas.</p>
+        <h3>1. MongoDB</h3>
+        <pre><code>brew tap mongodb/brew
+brew install mongodb-community
+brew services start mongodb-community
+mongosh --eval "db.runCommand({ ping: 1 })"</code></pre>
+        <h3>2. Backend</h3>
+        <pre><code>cd Alumni-Connect/Backend
+cp .env.sample .env
+npm install
+npm run dev</code></pre>
+        <h3>3. ML service</h3>
+        <pre><code>cd Alumni-Connect/ML-Service
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python app.py</code></pre>
+        <h3>4. Frontend</h3>
+        <pre><code>cd Alumni-Connect/Frontend
+npm install
+npm run dev</code></pre>
+        <p>Open <code>http://127.0.0.1:5173</code>. Start order: MongoDB → Backend → ML → Frontend.</p>
+        <h3>Important configuration</h3>
+        <p>Set <code>MONGODB_URI</code>, a long random <code>JWT_SECRET</code>, <code>CORS_ORIGIN</code>, <code>ML_SERVICE_URL</code>, <code>FRONTEND_URL</code>, and optionally administrator/email credentials.</p>
+      </section>
+
+      <section class="chapter" id="manual">
+        <span class="chapter-number">Chapter 12</span><h2>User manual</h2>
+        <h3>Alumni journey</h3>
+        <ol><li>Verify email, register and wait for approval.</li><li>Sign in and complete profile.</li><li>Set privacy and notification preferences.</li><li>Use Directory, Assistant, Graph or Recommendations to discover alumni.</li><li>Connect and message permitted users.</li><li>Create or manage mentorship/referral workflows.</li><li>Join events and browse jobs/resources.</li><li>Use Account Security to inspect or revoke sessions.</li></ol>
+        <h3>Administrator journey</h3>
+        <ol><li>Review pending alumni.</li><li>Manage alumni records and imports.</li><li>Publish events, jobs, announcements and recognition.</li><li>Oversee mentorship and referrals.</li><li>Inspect live reports and export CSV.</li></ol>
+        <h3>Useful routes</h3>
+        <table><tbody>
+          <tr><th>Presentation</th><td><code>/demo</code></td><th>Assistant</th><td><code>/assistant</code></td></tr>
+          <tr><th>Graph</th><td><code>/network-graph</code></td><th>Evaluation</th><td><code>/model-evaluation</code></td></tr>
+          <tr><th>Privacy</th><td><code>/privacy</code></td><th>Security</th><td><code>/account-security</code></td></tr>
+        </tbody></table>
+      </section>
+
+      <section class="chapter" id="demo">
+        <span class="chapter-number">Chapter 13</span><h2>Presentation and viva</h2>
+        <h3>Recommended ten-minute sequence</h3>
+        <ol><li><strong>Overview:</strong> open <code>/demo</code> and explain the problem.</li><li><strong>Architecture:</strong> explain four layers and trust boundary.</li><li><strong>Assistant:</strong> find a mentor and show confirmation.</li><li><strong>Graph:</strong> filter, pan and show a path.</li><li><strong>Workflows:</strong> show mentoring milestones and referral history.</li><li><strong>ML:</strong> explain signals, reasons and evaluation.</li><li><strong>Trust:</strong> show privacy and session revocation.</li><li><strong>Evidence:</strong> show analytics and test totals.</li></ol>
+        <h3>Fast viva answers</h3>
+        <div class="grid two">
+          <article class="mini"><h4>Why hybrid recommendations?</h4><p>Text finds broad similarity; explicit skills/domain/location/experience provide controllable, explainable signals.</p></article>
+          <article class="mini"><h4>Why a separate ML service?</h4><p>Python isolates ranking dependencies while Express remains the authentication and policy boundary.</p></article>
+          <article class="mini"><h4>How can JWT sessions be revoked?</h4><p>The JWT has a random <code>jti</code>; middleware requires a matching active server-side session.</p></article>
+          <article class="mini"><h4>Is the assistant generative?</h4><p>No. It is grounded deterministic retrieval, avoiding fabricated alumni facts and external AI dependency.</p></article>
+          <article class="mini"><h4>How is privacy enforced?</h4><p>Backend filters/redaction and action rejection—not only frontend hiding.</p></article>
+          <article class="mini"><h4>What is the main limitation?</h4><p>The labelled ML dataset is small and must grow before broad accuracy claims.</p></article>
+        </div>
+      </section>
+
+      <section class="chapter" id="limitations">
+        <span class="chapter-number">Chapter 14</span><h2>Limitations and future scope</h2>
+        <h3>Current limitations</h3>
+        <ul><li>Four-case labelled recommendation benchmark.</li><li>Deterministic assistant instead of general language model.</li><li>Process-local cache and background queue.</li><li>Local uploads instead of managed object storage.</li><li>Email requires external credentials.</li><li>No institutional-scale load test or independent penetration test.</li><li>No automated account-deletion retention workflow.</li></ul>
+        <h3>Future scope</h3>
+        <ul><li>50–100+ reviewed scenarios and statistical evaluation.</li><li>Sentence embeddings and consented learning-to-rank.</li><li>Redis, durable workers and centralized observability.</li><li>Object storage and malware scanning.</li><li>Calendar/video integrations and native push.</li><li>Multi-institution tenancy and governance-approved retention/deletion.</li></ul>
+      </section>
+
+      <section class="chapter" id="changes">
+        <span class="chapter-number">Chapter 15</span><h2>Complete change summary</h2>
+        <table><thead><tr><th>Milestone</th><th>Delivered change</th></tr></thead><tbody>
+          <tr><td>1</td><td>Centralized credentials, bcrypt, authorization, validation and secure onboarding</td></tr>
+          <tr><td>2</td><td>Account approval, profiles, imports, admin tools and notifications</td></tr>
+          <tr><td>3</td><td>Mentorship, referrals, events, jobs, community, connections and contributions</td></tr>
+          <tr><td>4</td><td>Explainable network, mentor and referral recommendations</td></tr>
+          <tr><td>5</td><td>Health checks, OpenAPI, CI, deployment configuration and observability</td></tr>
+          <tr><td>6</td><td>Frontend redesign, resilience, lazy routes and browser quality</td></tr>
+          <tr><td>7</td><td>Stored real-time messaging and notifications</td></tr>
+          <tr><td>8</td><td>Adaptive recommendation feedback and reproducible evaluation</td></tr>
+          <tr><td>9</td><td>Indexes, bounded imports, cache and background jobs</td></tr>
+          <tr><td>10</td><td>Live analytics, exports and initial project package</td></tr>
+          <tr><td>11</td><td>Grounded assistant, interactive graph, mutuals and shortest paths</td></tr>
+          <tr><td>12</td><td>Mentorship goals/milestones and referral application pipeline</td></tr>
+          <tr><td>13</td><td>Privacy controls, blocking, personal-data export and smart reminders</td></tr>
+          <tr><td>14</td><td>Installable PWA, offline fallback, accessibility and presentation mode</td></tr>
+          <tr><td>15</td><td>Secure password recovery, login history and revocable sessions</td></tr>
+          <tr><td>16</td><td>Complete final report, technical documentation and this HTML handbook</td></tr>
+        </tbody></table>
+        <div class="callout"><strong>Final status:</strong> the implementation and documentation are saved locally. The working tree remains uncommitted unless a Git commit is explicitly requested.</div>
+      </section>
+    </main>
+
+    <footer>CMReunite Complete Project Guide · Generated from the implemented project · 26 July 2026</footer>
+  </div>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Print / Save PDF</button>
+    <button type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Top</button>
+  </div>
+  <script>
+    const chapters = [...document.querySelectorAll(".chapter")];
+    const search = document.getElementById("search");
+    const noResults = document.getElementById("noResults");
+    function filterChapters() {
+      const query = search.value.trim().toLowerCase();
+      let visible = 0;
+      chapters.forEach((chapter) => {
+        const match = !query || chapter.textContent.toLowerCase().includes(query);
+        chapter.hidden = !match;
+        if (match) visible += 1;
+      });
+      noResults.style.display = visible ? "none" : "block";
+    }
+    function toggleNav() {
+      document.getElementById("sidebar").classList.toggle("open");
+    }
+    search.addEventListener("input", filterChapters);
+    document.querySelectorAll("nav a").forEach((link) => link.addEventListener("click", () => {
+      document.getElementById("sidebar").classList.remove("open");
+    }));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "/" && document.activeElement !== search) {
+        event.preventDefault();
+        search.focus();
+      }
+      if (event.key === "Escape") {
+        search.value = "";
+        filterChapters();
+        document.getElementById("sidebar").classList.remove("open");
+      }
+    });
+  </script>
+</body>
+</html>

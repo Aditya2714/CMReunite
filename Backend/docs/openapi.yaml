@@ -1,0 +1,245 @@
+openapi: 3.1.0
+info:
+  title: CMReunite Alumni Connect API
+  version: 1.0.0
+  description: Secure API for alumni networking, mentorship, referrals, events, and recommendations.
+servers:
+  - url: http://localhost:4000
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
+  schemas:
+    Error:
+      type: object
+      properties:
+        status: { type: string, example: fail }
+        message: { type: string }
+paths:
+  /health:
+    get:
+      summary: Backend, database, and ML health
+      responses:
+        "200": { description: Healthy }
+        "503": { description: Degraded }
+  /register:
+    post:
+      summary: Register a verified alumni email for administrator approval
+      responses:
+        "201": { description: Registration submitted }
+        "400": { description: Invalid or unverified request }
+  /auth/login:
+    post:
+      summary: Log in and receive an HTTP-only JWT cookie
+      responses:
+        "200": { description: Authenticated }
+        "401": { description: Invalid credentials }
+  /auth/me:
+    get:
+      summary: Get the current authenticated user
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Current user }
+        "401": { description: Not authenticated }
+  /auth/logout:
+    post:
+      summary: Clear the authentication cookie
+      responses:
+        "200": { description: Logged out }
+  /mentorship:
+    get:
+      summary: List sent and received mentorship requests
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Mentorship requests }
+    post:
+      summary: Create a mentorship request
+      security: [{ cookieAuth: [] }]
+      responses:
+        "201": { description: Request created }
+  /referrals:
+    get:
+      summary: List relevant referral requests
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Referral requests }
+    post:
+      summary: Create a referral request
+      security: [{ cookieAuth: [] }]
+      responses:
+        "201": { description: Request created }
+  /event/all:
+    get:
+      summary: List events with current-user registration status
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Events }
+  /notifications:
+    get:
+      summary: List current-user notifications
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Notifications }
+  /messages:
+    get:
+      summary: List current-user direct conversations
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Paginated conversations and unread count }
+    post:
+      summary: Send an authenticated direct message
+      security: [{ cookieAuth: [] }]
+      responses:
+        "201": { description: Message created and delivered in real time }
+  /messages/{conversationId}:
+    get:
+      summary: Read a conversation and mark incoming messages as read
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Paginated messages }
+  /admin/reports/export:
+    get:
+      summary: Export institution engagement metrics as CSV
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: CSV engagement report
+          content:
+            text/csv: {}
+  /ml/recommendations:
+    post:
+      summary: Get explainable network, mentor, or referral recommendations
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Ranked recommendations }
+        "503": { description: Recommendation service unavailable }
+  /ml/feedback:
+    post:
+      summary: Record recommendation relevance or conversion feedback
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Feedback recorded }
+  /ml/evaluation:
+    get:
+      summary: Get the reproducible recommendation benchmark report
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Baseline and hybrid ranking metrics }
+  /assistant/query:
+    post:
+      summary: Search alumni profiles with a grounded natural-language query
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Parsed intent, evidence, and ranked alumni matches }
+        "400": { description: Query is too short }
+  /network/graph:
+    get:
+      summary: Get alumni nodes, accepted connections, and discovery links
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Interactive graph data }
+  /mentorship/{requestId}/progress:
+    post:
+      summary: Add or complete a mentorship milestone or add a progress note
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Mentorship progress updated }
+  /profile/privacy:
+    get:
+      summary: Read current-user privacy preferences and blocked users
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Privacy settings }
+    patch:
+      summary: Update profile, contact, messaging, connection, and mentorship privacy
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Privacy settings updated }
+  /profile/blocked/{userId}:
+    post:
+      summary: Block another member
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: User blocked }
+    delete:
+      summary: Unblock another member
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: User unblocked }
+  /profile/export:
+    get:
+      summary: Export current-user account and activity data as JSON
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Personal data export }
+  /profile/activity-summary:
+    get:
+      summary: Get live current-user dashboard metrics
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Connection, event, referral, mentorship, and message counts }
+  /notifications/preferences:
+    get:
+      summary: Read notification channel, digest, category, and quiet-hour preferences
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Notification preferences }
+    patch:
+      summary: Update notification preferences
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Notification preferences updated }
+  /assistant/action:
+    post:
+      summary: Preview or confirm a grounded assistant action
+      description: Mutating actions return a confirmation requirement before execution.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Confirmation preview or navigation action }
+        "201": { description: Confirmed action completed }
+  /auth/forgot-password:
+    post:
+      summary: Request a privacy-safe password reset email
+      responses:
+        "200": { description: Generic response regardless of account existence }
+  /auth/reset-password:
+    post:
+      summary: Reset a password with a single-use expiring token
+      responses:
+        "200": { description: Password reset and all sessions revoked }
+  /auth/change-password:
+    post:
+      summary: Change the current password and revoke other sessions
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Password changed }
+  /auth/sessions:
+    get:
+      summary: List current and historical login sessions
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Device and login history }
+  /auth/sessions/{sessionId}:
+    delete:
+      summary: Revoke one owned login session
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Session revoked }
+  /auth/logout-all:
+    post:
+      summary: Revoke all login sessions
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Signed out everywhere }

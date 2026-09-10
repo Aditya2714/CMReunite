@@ -1,0 +1,38 @@
+{
+  "dataset": "Labelled alumni recommendation fixtures",
+  "evaluatedAt": "2026-07-26",
+  "mode": "mentor",
+  "k": 1,
+  "models": [
+    {
+      "algorithm": "skills-only",
+      "precision": 0.75,
+      "recall": 0.75,
+      "mrr": 0.875,
+      "ndcg": 0.75,
+      "fixtures": 4
+    },
+    {
+      "algorithm": "content-only",
+      "precision": 1,
+      "recall": 1,
+      "mrr": 1,
+      "ndcg": 1,
+      "fixtures": 4
+    },
+    {
+      "algorithm": "hybrid-adaptive",
+      "precision": 1,
+      "recall": 1,
+      "mrr": 1,
+      "ndcg": 1,
+      "fixtures": 4
+    }
+  ],
+  "winner": "content-only + hybrid-adaptive",
+  "methodology": [
+    "Ground-truth relevant alumni are labelled in version-controlled fixtures.",
+    "All models rank the same candidate sets.",
+    "Precision, recall, reciprocal rank and NDCG are reported at the same K."
+  ]
+}
