@@ -1,31 +1,16 @@
-const Alumni = require("../models/alumniModel");
-
-async function alumniListController(req, res) {
+const access = require("../services/departmentAccess");
+const { getManagedAlumni } = require("./adminController");
+const { searchDirectory } = require("../services/directoryService");
+// Keep the legacy URL, with the same permissions as the current endpoints.
+module.exports = async (req, res) => {
   try {
-    const page = Math.max(Number(req.query.page) || 1, 1);
-    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
-    const search = String(req.query.search || "").trim();
-    const filter = search
-      ? {
-          $or: ["firstName", "lastName", "company", "designation", "branch", "location"].map(
-            (field) => ({ [field]: { $regex: search, $options: "i" } })
-          ),
-        }
-      : {};
-    const [alumni, total] = await Promise.all([
-      Alumni.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
-      Alumni.countDocuments(filter),
-    ]);
-    res.status(200).json({
-      status: "success",
-      data: {
-        alumni,
-        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-      },
-    });
+    if (access.managementRole(req.user)) {
+      await access.requireManagement(req.user);
+      return await getManagedAlumni(req, res);
+    }
+    const data = await searchDirectory(req.user, { keyword: req.query.search, page: req.query.page, limit: req.query.limit });
+    return res.json({ status: "success", data });
   } catch (error) {
-    console.error("Error during alumni list:", error);
-    throw error;
+    return res.status(error.status || 500).json({ status: "fail", message: error.status ? error.message : "Unable to load alumni" });
   }
-}
-module.exports = alumniListController;
+};

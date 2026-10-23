@@ -119,16 +119,16 @@ const seed = async () => {
   }
 
   await Job.updateOne(
-    { title: "Demo Full Stack Engineer", createdBy: createdUsers[0]._id },
+    { title: "Demo Full Stack Engineer", author: createdUsers[0]._id },
     {
       $setOnInsert: {
         title: "Demo Full Stack Engineer",
-        description: "A seeded role for demonstrating jobs and referral workflows.",
+        content: "A seeded role for demonstrating jobs and referral workflows.",
         company: "CloudScale",
         location: "Bengaluru",
         type: "Full-time",
         vacancy: 2,
-        createdBy: createdUsers[0]._id,
+        author: createdUsers[0]._id,
       },
     },
     { upsert: true }

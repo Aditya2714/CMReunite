@@ -20,7 +20,8 @@ function AccountSecurity() {
       const { data } = await api.post("/auth/change-password", {
         currentPassword: form.currentPassword, newPassword: form.newPassword,
       });
-      setMessage(data.message); setForm({ currentPassword: "", newPassword: "", confirmPassword: "" }); load();
+      setMessage(data.message); setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      if (data.requiresLogin) { dispatch(logout()); navigate("/login"); } else load();
     } catch (error) { setMessage(error.response?.data?.message || "Unable to change password."); }
   };
   const revoke = async (session) => {
@@ -36,7 +37,7 @@ function AccountSecurity() {
       <section className="mx-auto max-w-5xl space-y-6">
         <header className="rounded-[2rem] bg-[#101936] p-8 text-white">
           <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-teal-300"><FaShieldAlt /> Secure account management</p>
-          <h1 className="mt-3 text-4xl font-black">Protect your CMReunite account.</h1>
+          <h1 className="mt-3 text-4xl font-black">Protect your CMRunite account.</h1>
           <p className="mt-3 text-sm font-semibold text-slate-300">Change your password, review signed-in devices and revoke access you no longer recognize.</p>
         </header>
         {message && <p role="status" className="rounded-xl bg-indigo-50 p-4 text-sm font-bold text-indigo-700">{message}</p>}

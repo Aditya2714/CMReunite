@@ -1,3 +1,4 @@
+const policy = require("../services/discoveryPolicy");
 const mongoose = require("mongoose");
 const Alumni = require("../models/alumniModel");
 const Connection = require("../models/connectionModel");
@@ -44,7 +45,7 @@ const getMyConnections = async (req, res) => {
       ),
     ];
 
-    const relatedProfiles = await Alumni.find({ user: { $in: relatedUserIds } });
+    const relatedProfiles = await policy.visibleProfiles(req.user, {}, { user: { $in: relatedUserIds } });
     const profileByUser = relatedProfiles.reduce((map, profile) => {
       map[profile.user.toString()] = profile;
       return map;
@@ -74,11 +75,7 @@ const getMyConnections = async (req, res) => {
       ]),
     ]);
 
-    const suggestions = await Alumni.find({
-      user: { $nin: [...connectedUserIds].map((id) => new mongoose.Types.ObjectId(id)) },
-    })
-      .sort({ createdAt: -1 })
-      .limit(8);
+    const suggestions = (await policy.visibleProfiles(req.user, { purpose: "connect" })).filter((profile) => !connectedUserIds.has(String(profile.user))).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
 
     return res.status(200).json({
       status: "success",
@@ -101,7 +98,7 @@ const sendConnectionRequest = async (req, res) => {
       return res.status(403).json({ status: "fail", message: "Only alumni can send connection requests" });
     }
 
-    const recipientProfile = await Alumni.findById(req.params.alumniId);
+    const recipientProfile = await policy.requireVisibleProfile(req.user, req.params.alumniId, "connect");
     if (!recipientProfile) {
       return res.status(404).json({ status: "fail", message: "Alumni profile not found" });
     }
@@ -138,6 +135,7 @@ const sendConnectionRequest = async (req, res) => {
       message: req.body.message || "",
     });
 
+  require("../services/discoveryPolicy").invalidateDiscovery();
     return res.status(201).json({
       status: "success",
       message: "Connection request sent",
@@ -145,7 +143,7 @@ const sendConnectionRequest = async (req, res) => {
     });
   } catch (error) {
     console.error("Error sending connection request:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    return res.status(error.status || 500).json({ status: "fail", message: error.status ? error.message : "Internal Server Error" });
   }
 };
 
@@ -171,6 +169,7 @@ const updateConnectionRequest = async (req, res) => {
 
     connection.status = status;
     await connection.save();
+    policy.invalidateDiscovery();
 
     return res.status(200).json({
       status: "success",

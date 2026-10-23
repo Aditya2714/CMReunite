@@ -1,0 +1,9 @@
+simulation: ml-timeout
+routing: path
+mocks:
+  - routeKey: ml
+    path: ../mocks/ml/config.yaml
+    scenarios:
+      - overrides:
+          conditions:
+            latency: { delay_ms: 9000 }

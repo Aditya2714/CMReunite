@@ -6,8 +6,20 @@ import { toast, ToastContainer } from "react-toastify";
 import { login } from "../features/authSlice";
 import { useCurrentUser } from "../services/authService";
 
+const ADMIN_DESIGNATIONS = [
+  "Head of Department",
+  "Professor",
+  "Associate Professor",
+  "Assistant Professor",
+  "Placement Officer",
+  "Department Coordinator",
+  "Administrative Staff",
+  "Other",
+];
+
 function Profile() {
   const user = useCurrentUser() || {};
+  const isAdministrativeUser = ["admin", "super_admin"].includes(user.role);
   const dispatch = useDispatch();
   const displayName =
     [user.firstName, user.lastName].filter(Boolean).join(" ") ||
@@ -22,6 +34,7 @@ function Profile() {
     .toUpperCase();
 
   const [profile, setProfile] = useState({
+    adminName: user.adminName || user.name || "",
     firstName: user.firstName || "",
     lastName: user.lastName || "",
     email: user.email || "",
@@ -32,6 +45,8 @@ function Profile() {
     endYear: user.endYear || "",
     company: user.company || "",
     designation: user.designation || "",
+    officialDesignation: user.officialDesignation || "",
+    customDesignation: user.customDesignation || "",
     location: user.location || "",
     bio: user.bio || "",
     photoUrl: user.imageUrl || user.profileImage || user.avatar || user.image || user.photoUrl || "",
@@ -50,6 +65,7 @@ function Profile() {
           ...current,
           firstName: latestProfile.firstName || "",
           lastName: latestProfile.lastName || "",
+          adminName: latestProfile.adminName || latestProfile.name || "",
           email: latestProfile.email || "",
           phone: latestProfile.mobileNumber || latestProfile.phone || "",
           branch: latestProfile.branch || "",
@@ -58,6 +74,10 @@ function Profile() {
           endYear: latestProfile.endYear || "",
           company: latestProfile.company || "",
           designation: latestProfile.designation || "",
+          officialDesignation: latestProfile.officialDesignation || "",
+          customDesignation: latestProfile.customDesignation || "",
+          department: latestProfile.department || null,
+          role: latestProfile.role || user.role,
           location: latestProfile.location || "",
           bio: latestProfile.bio || "",
           photoUrl: latestProfile.imageUrl || latestProfile.photoUrl || "",
@@ -84,8 +104,12 @@ function Profile() {
 
     try {
       const formData = new FormData();
+      const adminFields = ["adminName", "email", "phone", "officialDesignation", "customDesignation"];
       Object.entries(profile).forEach(([key, value]) => {
-        if (!["photoUrl", "fileType", "originalFileName"].includes(key)) {
+        const allowed = isAdministrativeUser
+          ? adminFields.includes(key)
+          : !["adminName", "officialDesignation", "customDesignation", "department", "role", "photoUrl", "fileType", "originalFileName", "branch"].includes(key);
+        if (allowed) {
           formData.append(key, value);
         }
       });
@@ -125,11 +149,12 @@ function Profile() {
             Profile section
           </p>
           <h1 className="relative text-3xl font-black tracking-tight">
-            Edit your alumni profile
+            {isAdministrativeUser ? "Edit your administrator profile" : "Edit your alumni profile"}
           </h1>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-            Keep your profile details current so classmates, faculty, and alumni
-            coordinators can recognize and reach you easily.
+            {isAdministrativeUser
+              ? "Keep your official contact and administrative information current."
+              : "Keep your profile details current so classmates, faculty, and alumni coordinators can recognize and reach you easily."}
           </p>
         </div>
 
@@ -187,28 +212,45 @@ function Profile() {
                 Personal details
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-bold text-slate-600">
-                    First name
-                  </span>
-                  <input
-                    name="firstName"
-                    value={profile.firstName}
-                    onChange={handleChange}
-                    className={inputClass}
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-2 block text-sm font-bold text-slate-600">
-                    Last name
-                  </span>
-                  <input
-                    name="lastName"
-                    value={profile.lastName}
-                    onChange={handleChange}
-                    className={inputClass}
-                  />
-                </label>
+                {isAdministrativeUser ? (
+                  <label className="block md:col-span-2">
+                    <span className="mb-2 block text-sm font-bold text-slate-600">
+                      Full name
+                    </span>
+                    <input
+                      name="adminName"
+                      value={profile.adminName}
+                      onChange={handleChange}
+                      required
+                      className={inputClass}
+                    />
+                  </label>
+                ) : (
+                  <>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-bold text-slate-600">
+                        First name
+                      </span>
+                      <input
+                        name="firstName"
+                        value={profile.firstName}
+                        onChange={handleChange}
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-bold text-slate-600">
+                        Last name
+                      </span>
+                      <input
+                        name="lastName"
+                        value={profile.lastName}
+                        onChange={handleChange}
+                        className={inputClass}
+                      />
+                    </label>
+                  </>
+                )}
                 <label className="block">
                   <span className="mb-2 block text-sm font-bold text-slate-600">
                     Email
@@ -217,6 +259,7 @@ function Profile() {
                     name="email"
                     type="email"
                     value={profile.email}
+                    readOnly={isAdministrativeUser}
                     onChange={handleChange}
                     className={inputClass}
                   />
@@ -238,8 +281,61 @@ function Profile() {
 
             <section>
               <h2 className="mb-4 text-xl font-black text-slate-950">
-                Academic and career details
+                {isAdministrativeUser ? "Administrative information" : "Academic and career details"}
               </h2>
+              {isAdministrativeUser ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-slate-600">Department</span>
+                    <input
+                      aria-label="Department"
+                      value={profile.department?.name || (user.role === "super_admin" ? "Platform-wide" : "Not assigned")}
+                      readOnly
+                      className={`${inputClass} bg-slate-100`}
+                    />
+                    <span className="mt-2 block text-xs font-semibold text-slate-500">
+                      Department assigned by Super Admin.
+                    </span>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-slate-600">Role</span>
+                    <input
+                      value={user.role === "super_admin" ? "Super Admin" : "Department Admin"}
+                      readOnly
+                      className={`${inputClass} bg-slate-100`}
+                    />
+                  </label>
+                  <label className="block md:col-span-2">
+                    <span className="mb-2 block text-sm font-bold text-slate-600">Official designation</span>
+                    <select
+                      name="officialDesignation"
+                      value={profile.officialDesignation}
+                      onChange={handleChange}
+                      required
+                      className={inputClass}
+                    >
+                      <option value="">Select official designation</option>
+                      {ADMIN_DESIGNATIONS.map((designation) => (
+                        <option key={designation} value={designation}>{designation}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {profile.officialDesignation === "Other" && (
+                    <label className="block md:col-span-2">
+                      <span className="mb-2 block text-sm font-bold text-slate-600">Custom designation</span>
+                      <input
+                        name="customDesignation"
+                        value={profile.customDesignation}
+                        onChange={handleChange}
+                        maxLength={100}
+                        required
+                        placeholder="Enter the official designation"
+                        className={inputClass}
+                      />
+                    </label>
+                  )}
+                </div>
+              ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-sm font-bold text-slate-600">
@@ -247,6 +343,7 @@ function Profile() {
                   </span>
                   <input
                     name="branch"
+                    disabled
                     value={profile.branch}
                     onChange={handleChange}
                     placeholder="Computer Science"
@@ -339,6 +436,7 @@ function Profile() {
                   />
                 </label>
               </div>
+              )}
             </section>
 
             <div className="flex justify-end border-t border-slate-200 pt-6">

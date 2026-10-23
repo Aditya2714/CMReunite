@@ -1,0 +1,13 @@
+{
+  "departments": [
+    { "code": "CSE", "name": "Computer Science and Engineering" },
+    { "code": "ECE", "name": "Electronics and Communication Engineering" },
+    { "code": "ISE", "name": "Information Science and Engineering" },
+    { "code": "EEE", "name": "Electrical and Electronics Engineering" },
+    { "code": "ME", "name": "Mechanical Engineering" },
+    { "code": "CV", "name": "Civil Engineering" }
+  ],
+  "branches": { "Computer Science": "CSE", "Electronics": "ECE", "Information Science": "ISE" },
+  "admins": {},
+  "events": {}
+}

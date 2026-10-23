@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { REJECTION_REASONS } = require("../utils/rejectionReasons");
 const {
   hashPassword,
   isPasswordHash,
@@ -22,9 +23,13 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["alumni", "admin", "college"],
+    enum: ["alumni", "admin", "super_admin", "college"],
     default: "alumni"
   },
+  department: { type: mongoose.Schema.Types.ObjectId, ref: "Department", default: null },
+  isActive: { type: Boolean, default: true },
+  mustChangePassword: { type: Boolean, default: false },
+  authVersion: { type: Number, default: 0 },
   isApproved: {
     type: Boolean,
     default: true   // ✅ CHANGED HERE
@@ -34,6 +39,10 @@ const userSchema = new mongoose.Schema({
     enum: ["pending", "approved", "rejected"],
     default: "approved"
   },
+  rejectionReason: { type: String, enum: ["", ...REJECTION_REASONS.map((reason) => reason.value)], default: "" },
+  rejectionComments: { type: String, trim: true, maxlength: 2000, default: "" },
+  approvalReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  approvalReviewedAt: Date,
   privacy: {
     profileVisibility: {
       type: String,
@@ -74,6 +83,8 @@ const userSchema = new mongoose.Schema({
   passwordResetExpiresAt: { type: Date, select: false },
   passwordChangedAt: Date,
 }, { timestamps: true });
+
+userSchema.index({ department: 1 }, { unique: true, partialFilterExpression: { role: "admin", isActive: true, department: { $type: "objectId" } }, name: "one_active_admin_per_department" });
 
 userSchema.pre("save", async function hashUserPassword() {
   if (!this.isModified("password") || isPasswordHash(this.password)) return;

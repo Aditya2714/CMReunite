@@ -13,12 +13,14 @@ import {
 import { useCurrentUser } from "../services/authService";
 import Loader from "./Loader";
 
-const branchOptions = ["All branches", "CSE", "ISE", "ECE", "EEE", "ME", "CV"];
+
 const batchOptions = ["All batches", "2024", "2023", "2022", "2021", "2020"];
 
 const formatAnnouncementForUi = (item) => ({
   id: item._id,
   title: item.title,
+  scope: item.scope,
+  department: item.department,
   branch: item.branch || "All branches",
   batch: item.batch || "All batches",
   message: item.message,
@@ -29,9 +31,10 @@ const formatAnnouncementForUi = (item) => ({
 
 function Announcements() {
   const user = useCurrentUser() || {};
-  const isAdmin = user.role === "admin";
+  const isAdmin = ["admin", "super_admin"].includes(user.role);
   const [title, setTitle] = useState("");
-  const [branch, setBranch] = useState("All branches");
+  const [branch, setBranch] = useState(user.role === "super_admin" ? "All branches" : "Assigned department");
+  useEffect(() => { if (user.role === "admin") api.get("/departments").then((response) => setBranch(response.data.data.departments.find((department) => department._id === user.department)?.code || "Assigned department")).catch(() => {}); }, [user.role, user.department]);
   const [batch, setBatch] = useState("All batches");
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState(null);
@@ -58,7 +61,7 @@ function Announcements() {
 
   const resetForm = () => {
     setTitle("");
-    setBranch("All branches");
+    setBranch(branch);
     setBatch("All batches");
     setMessage("");
     setAttachment(null);
@@ -84,12 +87,12 @@ function Announcements() {
 
       if (editingId) {
         await api.patch(`/announcements/${editingId}`, {
-          title, branch, batch, message,
+          title, message,
         });
         setStatusMsg("Announcement updated.");
       } else {
         await api.post("/announcements", formData);
-        setStatusMsg("Announcement published. Emails triggered to matching alumni.");
+        setStatusMsg("Announcement published to its audience. Email is sent only when sender credentials are configured.");
       }
 
       const response = await api.get("/announcements");
@@ -135,7 +138,7 @@ function Announcements() {
             Share updates with the alumni community.
           </h1>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300 md:text-base">
-            Create targeted announcements for alumni by branch and batch.
+            Department admins publish to their assigned department. Super Admin publishes to every department and batch.
           </p>
           {loading && (
             <p className="mt-3 text-sm font-semibold text-teal-100">
@@ -193,10 +196,11 @@ function Announcements() {
                 </span>
                 <select
                   value={branch}
+                  disabled
                   onChange={(e) => setBranch(e.target.value)}
                   className={inputClass}
                 >
-                  {branchOptions.map((opt) => (
+                  {[branch].map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>
@@ -210,6 +214,7 @@ function Announcements() {
                 </span>
                 <select
                   value={batch}
+                  disabled={Boolean(editingId) || user.role === "super_admin"}
                   onChange={(e) => setBatch(e.target.value)}
                   className={inputClass}
                 >
@@ -303,7 +308,7 @@ function Announcements() {
                     </h3>
                     <div className="mt-1 flex flex-wrap gap-2">
                       <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700">
-                        {item.branch}
+                        {item.scope === "platform" ? "Platform-wide" : item.branch}
                       </span>
                       <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-extrabold text-purple-700">
                         Batch: {item.batch}
@@ -351,7 +356,7 @@ function Announcements() {
                   </a>
                 )}
 
-                {isAdmin && (
+                {isAdmin && (user.role === "super_admin" || (item.scope === "department" && String(item.department) === String(user.department))) && (
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <button
                       type="button"

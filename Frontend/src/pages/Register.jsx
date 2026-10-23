@@ -12,6 +12,8 @@ function Register() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedDomain, setSelectedDomain] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  useEffect(() => { api.get("/departments").then((response) => setDepartments(response.data.data.departments)).catch(() => setDepartments([])); }, []);
 
   const [step, setStep] = useState(1);
   const [otpValue, setOtpValue] = useState("");
@@ -24,6 +26,7 @@ function Register() {
     endYear: "",
     degree: "",
     branch: "",
+    department: "",
     rollNumber: "",
     firstName: "",
     lastName: "",
@@ -148,7 +151,7 @@ function Register() {
         startYear: formData.startYear,
         endYear: formData.endYear,
         degree: formData.degree,
-        branch: formData.branch,
+        department: formData.department,
         rollNumber: formData.rollNumber,
         linkedinUrl: formData.linkedinUrl,
         designation: formData.designation,
@@ -165,13 +168,7 @@ function Register() {
       }
     } catch (error) {
       console.error("Error during registration:", error);
-      const detail = error.response?.data?.errors;
-      if (detail && detail.length) {
-        const msgs = detail.map((e) => `${e.field}: ${e.message}`).join("\n");
-        toast.error(msgs);
-      } else {
-        toast.error(error.response?.data?.message || "Registration failed. Please try again.");
-      }
+      toast.error(error.response?.data?.message || "Registration failed. Please try again.");
     }
 
     setLoading(false);
@@ -430,16 +427,13 @@ function Register() {
                       </label>
                       <label className="block">
                         <span className="mb-2 block text-sm font-bold text-slate-600">
-                          Branch *
+                          Department *
                         </span>
-                        <input
-                          name="branch"
-                          type="text"
-                          required={isAlumniRole}
-                          onChange={handleChange}
-                          placeholder="Computer Science"
-                          className={inputClass}
-                        />
+                        <select aria-label="Department" name="department" required={isAlumniRole} value={formData.department} onChange={handleChange} className={inputClass}>
+                          <option value="">Select an active department</option>
+                          {departments.map((department) => <option key={department._id} value={department._id}>{department.name}</option>)}
+                        </select>
+                        {!departments.length && <p className="text-sm text-amber-800">Department setup is required before registration.</p>}
                       </label>
                       <label className="block">
                         <span className="mb-2 block text-sm font-bold text-slate-600">

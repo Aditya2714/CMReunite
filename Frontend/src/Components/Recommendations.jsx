@@ -25,12 +25,15 @@ function Recommendations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
       setLoading(true);
       setError("");
       setMessage("");
+      setRecommendations([]);
+      setMetadata({});
       try {
         const { data } = await api.post("/ml/recommendations", {
           topN: 12,
@@ -41,13 +44,13 @@ function Recommendations() {
         setMetadata(data.data);
       } catch (err) {
         console.error("Recommendation fetch failed:", err);
-        setError("Recommendations are unavailable. Check that the ML service is running.");
+        setError("Recommendations are temporarily unavailable. Please try again.");
       } finally {
         setLoading(false);
       }
     };
     fetchRecommendations();
-  }, [mode]);
+  }, [mode, retry]);
 
   const submitFeedback = async (person, action) => {
     try {
@@ -134,7 +137,7 @@ function Recommendations() {
 
         {message && <p className="rounded-lg bg-blue-50 p-4 text-sm font-bold text-blue-700">{message}</p>}
         {loading && <p className="rounded-lg bg-white p-8 text-center font-bold">Finding the best matches…</p>}
-        {error && <p className="rounded-lg bg-red-50 p-6 text-center font-bold text-red-700">{error}</p>}
+        {error && <div role="alert" className="rounded-lg bg-red-50 p-6 text-center font-bold text-red-700"><p>{error}</p><button type="button" onClick={() => setRetry((current) => current + 1)} className="mt-3 rounded-lg border border-red-700 px-4 py-2">Try again</button></div>}
 
         {!loading && !error && !recommendations.length && (
           <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">

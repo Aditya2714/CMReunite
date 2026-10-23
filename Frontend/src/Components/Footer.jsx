@@ -18,7 +18,7 @@ function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4">
         {/* Column 1 — About */}
         <div>
-          <h3 className="mb-4 text-lg font-extrabold text-white">About CMReunite</h3>
+          <h3 className="mb-4 text-lg font-extrabold text-white">About CMRunite</h3>
           <p className="text-sm leading-7 text-slate-400">
             A dedicated platform for CMR Institute of Technology alumni to reconnect,
             collaborate, and grow together. Stay close to the community that shaped you.
@@ -48,7 +48,7 @@ function Footer() {
           <ul className="space-y-2 text-sm font-semibold">
             {[
               ["/events", "Events"],
-              ["/jobs", "Job Board"],
+              ["/community-posts", "Community Posts"],
               ["/mentorship", "Mentorship"],
               ["/alumni-directory", "Alumni Directory"],
               ["/connections", "Connections"],
@@ -69,7 +69,6 @@ function Footer() {
           <h3 className="mb-4 text-lg font-extrabold text-white">Resources</h3>
           <ul className="space-y-2 text-sm font-semibold">
             {[
-              ["/alumni-stories", "Alumni Stories"],
               ["/recognition", "Recognition"],
               ["/announcements", "Announcements"],
               ["/contributions", "Contributions"],
@@ -113,7 +112,7 @@ function Footer() {
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-5 text-xs font-semibold text-slate-500 sm:flex-row">
-          <p>&copy; 2026 CMReunite. All rights reserved.</p>
+          <p>&copy; 2026 CMRunite. All rights reserved.</p>
           <div className="flex gap-5">
             <a href="#" className="transition hover:text-white">Privacy Policy</a>
             <a href="#" className="transition hover:text-white">Terms of Service</a>

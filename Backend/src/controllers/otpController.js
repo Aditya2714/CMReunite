@@ -1,14 +1,7 @@
-const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const OTP = require("../models/otpModel");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const { transporter } = require("../utils/emailTransport");
 
 const generateOtp = () => {
   return crypto.randomInt(100000, 999999).toString();
@@ -32,10 +25,10 @@ const sendOtp = async (req, res) => {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "CMReunite - Email Verification OTP",
+      subject: "CMRunite - Email Verification OTP",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
-          <h2 style="color: #1e40af;">CMReunite</h2>
+          <h2 style="color: #1e40af;">CMRunite</h2>
           <p>Your email verification OTP is:</p>
           <div style="background: #f1f5f9; padding: 16px; text-align: center; border-radius: 8px; margin: 16px 0;">
             <span style="font-size: 28px; font-weight: bold; letter-spacing: 8px; color: #1e40af;">${otp}</span>
@@ -47,7 +40,7 @@ const sendOtp = async (req, res) => {
 
     res.status(200).json({ status: "success", message: "OTP sent to your email" });
   } catch (error) {
-    console.error("Send OTP error:", error);
+    require("../utils/operationalLog").failure("otp.send_failed", error);
     res.status(500).json({ status: "fail", message: "Failed to send OTP. Please try again." });
   }
 };
@@ -89,7 +82,7 @@ const verifyOtp = async (req, res) => {
 
     res.status(200).json({ status: "success", message: "Email verified successfully" });
   } catch (error) {
-    console.error("Verify OTP error:", error);
+    require("../utils/operationalLog").failure("otp.verify_failed", error);
     res.status(500).json({ status: "fail", message: "Failed to verify OTP" });
   }
 };

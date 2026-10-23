@@ -5,6 +5,7 @@ import {
   createBrowserRouter,
   RouterProvider,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 
 import { Provider } from "react-redux";
@@ -21,12 +22,14 @@ import {
   useSessionChecked,
 } from "./services/authService.js";
 
+const SuperAdmin = lazy(() => import("./Components/SuperAdmin.jsx"));
 const Register = lazy(() => import("./pages/Register.jsx"));
 const Login = lazy(() => import("./pages/Login.jsx"));
 const Dashboard = lazy(() => import("./Components/Dashboard.jsx"));
 const Home = lazy(() => import("./Components/Home.jsx"));
 const Event = lazy(() => import("./Components/Event.jsx"));
-const Jobs = lazy(() => import("./Components/Jobs.jsx"));
+const CommunityPosts = lazy(() => import("./Components/CommunityPosts.jsx"));
+const LegacyPostsRedirect = lazy(() => import("./Components/LegacyPostsRedirect.jsx"));
 const Newsletter = lazy(() => import("./Components/NewsLetter.jsx"));
 const Announcements = lazy(() => import("./Components/SendMail.jsx"));
 const BulkUpload = lazy(() => import("./Components/BulkUpload.jsx"));
@@ -55,7 +58,7 @@ const lazyFeature = (name) =>
       default: module[name],
     }))
   );
-const AlumniStories = lazyFeature("AlumniStories");
+
 const CareerReferrals = lazyFeature("CareerReferrals");
 const Connections = lazyFeature("Connections");
 const Contributions = lazyFeature("Contributions");
@@ -66,6 +69,9 @@ const ResourceLibrary = lazyFeature("ResourceLibrary");
 function RequireAuth({ children }) {
   const loggedIn = useLoggedIn();
   const checked = useSessionChecked();
+  const user = useCurrentUser();
+  const location = useLocation();
+  if (user?.mustChangePassword && location.pathname !== "/account-security") return <Navigate to="/account-security" replace />;
   if (!checked) return <Loader text="Checking session..." />;
   return loggedIn ? children : <Navigate to="/login" replace />;
 }
@@ -77,18 +83,42 @@ function RequireAdminTool({ children }) {
 
   if (!checked) return <Loader text="Checking session..." />;
   if (!loggedIn) return <Navigate to="/login" replace />;
-  return ["admin", "college"].includes(user?.role) ? (
+  if (user?.mustChangePassword) return <Navigate to="/account-security" replace />;
+  if (user?.role === "admin" && !user.department) return <Navigate to="/dashboard" replace />;
+  return ["admin", "super_admin"].includes(user?.role) ? (
     children
   ) : (
     <Navigate to="/dashboard" replace />
   );
 }
 
+function RequireSuperAdmin({ children }) {
+  const loggedIn = useLoggedIn();
+  const user = useCurrentUser();
+  const checked = useSessionChecked();
+
+  if (!checked) return <Loader text="Checking session..." />;
+  if (!loggedIn) return <Navigate to="/login" replace />;
+  if (user?.mustChangePassword) return <Navigate to="/account-security" replace />;
+  return user?.role === "super_admin" ? children : <Navigate to="/dashboard" replace />;
+}
+
+function SuperAdminAccess() {
+  const user = useCurrentUser();
+  return user?.role === "super_admin" ? <SuperAdmin /> : <Navigate to="/dashboard" replace />;
+}
+function DashboardEntry() {
+  const user = useCurrentUser();
+  if (user?.role === "super_admin") return <Navigate to="/super-admin" replace />;
+  if (user?.role === "admin" && !user.department) return <main className="p-8"><h1 className="text-2xl font-bold">Department assignment required</h1><p>Ask Super Admin to assign your department before using administrative tools.</p></main>;
+  return <Dashboard />;
+}
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
     children: [
+      { path: "/super-admin", element: <RequireAuth><SuperAdminAccess /></RequireAuth> },
       {
         path: "register",
         element: <Register />,
@@ -109,13 +139,13 @@ const router = createBrowserRouter([
       { path: "reset-password", element: <ResetPassword /> },
       {
         path: "demo",
-        element: <PresentationMode />,
+        element: <RequireSuperAdmin><PresentationMode /></RequireSuperAdmin>,
       },
       {
         path: "dashboard",
         element: (
           <RequireAuth>
-            <Dashboard />
+            <DashboardEntry />
           </RequireAuth>
         ),
       },
@@ -137,10 +167,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "/community-posts",
+        element: <RequireAuth><CommunityPosts /></RequireAuth>,
+      },
+      {
         path: "/jobs",
         element: (
           <RequireAuth>
-            <Jobs />
+            <LegacyPostsRedirect postType="job" />
           </RequireAuth>
         ),
       },
@@ -240,7 +274,7 @@ const router = createBrowserRouter([
         path: "/alumni-stories",
         element: (
           <RequireAuth>
-            <AlumniStories />
+            <LegacyPostsRedirect postType="story" />
           </RequireAuth>
         ),
       },
@@ -339,9 +373,9 @@ const router = createBrowserRouter([
       {
         path: "/model-evaluation",
         element: (
-          <RequireAuth>
+          <RequireSuperAdmin>
             <ModelEvaluation />
-          </RequireAuth>
+          </RequireSuperAdmin>
         ),
       },
       {

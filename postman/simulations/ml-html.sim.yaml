@@ -1,0 +1,5 @@
+simulation: ml-html
+routing: path
+mocks:
+  - routeKey: ml
+    path: ../mocks/ml-html/config.yaml

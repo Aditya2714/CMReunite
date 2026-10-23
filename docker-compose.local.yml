@@ -1,0 +1,9 @@
+services:
+  backend:
+    environment:
+      PUBLIC_API_URL: http://localhost:8081
+      CORS_ORIGIN: http://localhost:8081,http://127.0.0.1:8081
+      FRONTEND_URL: http://localhost:8081
+  frontend:
+    ports: !override
+      - "8081:8080"

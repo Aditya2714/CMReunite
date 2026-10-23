@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const { z } = require("zod");
 const User = require("../models/user");
@@ -16,7 +17,8 @@ const registrationSchema = z.object({
   startYear: z.coerce.number().int().min(1950).max(2100),
   endYear: z.coerce.number().int().min(1950).max(2100),
   degree: z.string().trim().min(1),
-  branch: z.string().trim().min(1),
+  branch: optionalText,
+  department: z.string().regex(/^[a-fA-F0-9]{24}$/),
   rollNumber: z.string().trim().min(1),
   firstName: z.string().trim().min(1),
   lastName: optionalText,
@@ -28,9 +30,11 @@ const registrationSchema = z.object({
   message: "End year must be greater than or equal to start year",
 });
 
-router.post("/", validate(registrationSchema), async (req, res) => {
+router.post("/", validate(registrationSchema), asyncHandler(async (req, res) => {
   let user;
   try {
+    const department = await require("../services/departmentAccess").activeDepartment(req.body.department);
+    req.body.branch = department.code;
     const existingUser = await User.exists({ email: req.body.email });
     if (existingUser) {
       return res.status(409).json({
@@ -56,12 +60,14 @@ router.post("/", validate(registrationSchema), async (req, res) => {
       email: req.body.email,
       password: req.body.password,
       role: "alumni",
+      department: department._id,
       isApproved: false,
       approvalStatus: "pending",
     });
 
     await Alumni.create({
       user: user._id,
+      department: department._id,
       email: req.body.email,
       startYear: req.body.startYear,
       endYear: req.body.endYear,
@@ -84,12 +90,13 @@ router.post("/", validate(registrationSchema), async (req, res) => {
     });
   } catch (error) {
     if (user?._id) await User.findByIdAndDelete(user._id).catch(() => {});
+    if (error.status) return res.status(error.status).json({ status: "fail", message: error.message });
     if (error?.code === 11000) {
       return res.status(409).json({ status: "fail", message: "Email is already registered" });
     }
     console.error("Registration failed:", error.message);
     return res.status(500).json({ status: "fail", message: "Registration failed" });
   }
-});
+}));
 
 module.exports = router;

@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 
 const announcementSchema = new mongoose.Schema(
   {
+    department: { type: mongoose.Schema.Types.ObjectId, ref: "Department", default: null },
+    scope: { type: String, enum: ["department", "platform", "unassigned"], default: "unassigned" },
     title: {
       type: String,
       required: true,

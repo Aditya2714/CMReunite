@@ -1,0 +1,6 @@
+# Disposable local HTTPS rehearsal only; never use for an Internet deployment.
+services:
+  edge:
+    ports: !override ["127.0.0.1:18081:8080", "127.0.0.1:18443:8443"]
+    volumes:
+      - ./deploy/Caddyfile.local:/etc/caddy/Caddyfile:ro

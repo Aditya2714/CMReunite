@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: CMReunite Alumni Connect API
+  title: CMRunite Alumni Connect API
   version: 1.0.0
-  description: Secure API for alumni networking, mentorship, referrals, events, and recommendations.
+  description: Secure API for alumni networking, mentorship, referrals, events, and recommendations. Discovery enforces current active and approved alumni accounts, profile visibility, two-way blocking and contact masking. Inaccessible discovery targets return 404. Messages reject malformed IDs, pagination and invalid bodies with 400. Unexpected failures return a generic 500. Recommendation upstream failures return 503 with an eight-second deadline.
 servers:
   - url: http://localhost:4000
 components:
@@ -18,6 +18,21 @@ components:
         status: { type: string, example: fail }
         message: { type: string }
 paths:
+  /auth/csrf:
+    get:
+      summary: Obtain browser CSRF protection for the current cookie session
+      responses:
+        "200":
+          description: Session-bound token in data.csrfToken; send X-CSRF-Token on mutations. Never cache this response.
+  /health/live:
+    get:
+      responses:
+        "200": { description: Process is serving requests }
+  /health/ready:
+    get:
+      responses:
+        "200": { description: Core API database is ready; ML may be degraded }
+        "503": { description: Database unavailable }
   /health:
     get:
       summary: Backend, database, and ML health
@@ -90,6 +105,16 @@ paths:
         "200": { description: Paginated conversations and unread count }
     post:
       summary: Send an authenticated direct message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipientId, body]
+              properties:
+                recipientId: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+                body: { type: string, minLength: 1, maxLength: 2000, description: Trimmed before validation; must contain non-whitespace text }
       security: [{ cookieAuth: [] }]
       responses:
         "201": { description: Message created and delivered in real time }
@@ -119,7 +144,7 @@ paths:
       security: [{ cookieAuth: [] }]
       responses:
         "200": { description: Ranked recommendations }
-        "503": { description: Recommendation service unavailable }
+        "503": { description: Recommendations temporarily unavailable; retry later }
   /ml/feedback:
     post:
       summary: Record recommendation relevance or conversion feedback
@@ -243,3 +268,491 @@ paths:
       security: [{ cookieAuth: [] }]
       responses:
         "200": { description: Signed out everywhere }
+  /admin/rejection-reasons:
+    get:
+      summary: List the five supported alumni rejection reasons (admin only)
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Authoritative dropdown choices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      reasons:
+                        type: array
+                        minItems: 5
+                        maxItems: 5
+                        items:
+                          type: object
+                          properties:
+                            value: { type: string }
+                            label: { type: string }
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
+  /admin/users/{userId}/approval:
+    patch:
+      summary: Approve or reject an alumni registration (admin only)
+      description: Rejection requires a supported reason. Comments are optional except for Other. Approval clears previous rejection details. Invalid decisions have no side effects.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isApproved: { type: boolean }
+                approvalStatus: { type: string, enum: [approved, rejected] }
+                rejectionReason:
+                  type: string
+                  enum: [usn_mismatch, academic_mismatch, incomplete_profile, duplicate_registration, other]
+                rejectionComments: { type: string, maxLength: 2000 }
+                verificationNote: { type: string, maxLength: 2000, description: Optional approval note }
+              anyOf:
+                - required: [approvalStatus]
+                - required: [isApproved]
+      responses:
+        "200": { description: Decision saved with reviewer and timestamp; email queued. Rejection explanation is included in email and authenticated failed-login response. }
+        "400": { description: Missing or invalid reason, comments, decision, or user ID }
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
+        "404": { description: Alumni user not found }
+  /jobs/placement-notification-status:
+    get:
+      summary: Check whether placement-office notifications are available
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Status only; no recipient addresses or credentials are exposed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, enum: [enabled, disabled, not_configured] }
+        "401": { description: Authentication required }
+  /jobs/create:
+    post:
+      summary: Create an alumni job post and optionally queue a placement-office email
+      description: Only approved alumni can post. Notifications are disabled by default. When opted in and fully configured, pending delivery state is saved atomically with the job. SMTP failures do not fail creation. Editing or deleting a job never schedules a new notification.
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description]
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+                description: { type: string, minLength: 1, maxLength: 10000 }
+                company: { type: string, minLength: 1, maxLength: 200 }
+                location: { type: string, maxLength: 200 }
+                type: { type: string, maxLength: 100 }
+                status: { type: string, maxLength: 100 }
+                vacancy: { type: integer, minimum: 1, maximum: 10000, default: 1 }
+      responses:
+        "201":
+          description: Job saved; notification status means queued or disabled, not confirmed inbox delivery
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      job: { type: object }
+                      placementNotification:
+                        type: object
+                        properties:
+                          status: { type: string, enum: [queued, disabled] }
+        "400": { description: Invalid job details }
+        "401": { description: Authentication required }
+        "403": { description: Approved alumni access required }
+  /posts/settings:
+    get:
+      summary: Placement-email availability for the unified composer
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: "data.status is enabled, disabled, or not_configured; no credentials are exposed" }
+        "401": { description: Authentication required }
+  /posts:
+    get:
+      summary: Read the shared story/job feed in descending creation order
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { in: query, name: postType, schema: { type: string, enum: [story, job] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, maximum: 100000, default: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: "data.posts and data.pagination; each post includes canManage for its author. Internal notification state is excluded." }
+        "400": { description: Invalid filter or pagination }
+        "401": { description: Authentication required }
+    post:
+      summary: Publish a Story or Job Opportunity (approved alumni only)
+      description: Shared fields are postType, title and content. Stories accept category. Jobs accept company, location, employmentType, status and vacancy. Unknown or cross-type fields are rejected. Only a new job may enqueue placement email. Both types use the posts collection.
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [postType, title, content]
+              properties:
+                postType: { type: string, enum: [story, job] }
+                title: { type: string, minLength: 1, maxLength: 200 }
+                content: { type: string, minLength: 1, maxLength: 10000 }
+                category: { type: string, minLength: 1, maxLength: 100, description: Story only }
+                company: { type: string, minLength: 1, maxLength: 200, description: Job only }
+                location: { type: string, maxLength: 200, description: Job only }
+                employmentType: { type: string, minLength: 1, maxLength: 100, description: Job only }
+                status: { type: string, minLength: 1, maxLength: 100, description: Job only }
+                vacancy: { type: integer, minimum: 1, maximum: 10000, description: Job only }
+      responses:
+        "201": { description: "data.post and data.placementNotification.status (not_applicable for story; queued or disabled for job)" }
+        "400": { description: Invalid type-specific fields }
+        "401": { description: Authentication required }
+        "403": { description: Approved alumni access required }
+  /posts/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
+    get:
+      summary: Read an individual post for a direct link
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: data.post }
+        "400": { description: Invalid ID }
+        "401": { description: Authentication required }
+        "404": { description: Post not found }
+    patch:
+      summary: Update an author's own post without changing its postType or sending new mail
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: A subset of fields accepted at creation. Omitted fields retain their values. If postType is included it must match the existing type. Author and notification fields are never accepted.
+      responses:
+        "200": { description: data.post }
+        "400": { description: Invalid fields or attempted postType change }
+        "401": { description: Authentication required }
+        "403": { description: Only the approved author can edit }
+        "404": { description: Post not found }
+    delete:
+      summary: Delete an author's own post
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Post deleted }
+        "400": { description: Invalid ID }
+        "401": { description: Authentication required }
+        "403": { description: Only the approved author can delete }
+        "404": { description: Post not found }
+  /alumni/directory-options:
+    get:
+      summary: List the five title-based career seniority groups
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: "data.seniorityOptions contains value/label pairs for senior, manager, director, vp and executive" }
+        "401": { description: Authentication required }
+  /alumni:
+    get:
+      summary: Search visible alumni by current company, designation, career seniority and graduation batch
+      description: All supplied filters are combined. Career seniority is derived from current designation, never graduation year or work-history entries. VP and common executive title abbreviations are expanded; other text is treated literally. Privacy, blocking and account eligibility are applied before counts and pagination. Only current profile fields are searched. Hidden contact email addresses are not searchable.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { in: query, name: keyword, schema: { type: string, maxLength: 200 } }
+        - { in: query, name: company, schema: { type: string, maxLength: 200 } }
+        - { in: query, name: designation, schema: { type: string, maxLength: 200 } }
+        - { in: query, name: seniority, schema: { type: string, enum: [senior, manager, director, vp, executive] } }
+        - { in: query, name: batch, description: Exact graduation year, schema: { type: string, pattern: '^\d{4}$' } }
+        - { in: query, name: branch, schema: { type: string, maxLength: 200 } }
+        - { in: query, name: location, schema: { type: string, maxLength: 200 } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, maximum: 100000, default: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
+      responses:
+        "200":
+          description: "data.alumni and data.pagination (page, limit, total, pages). Each profile includes careerSeniority and careerSeniorityLabel. Empty careerSeniority means unclassified. Contact fields follow profile privacy. The UI requests 12 per page; legacy clients default to 100."
+        "400": { description: Invalid filters, types, lengths or pagination }
+        "401": { description: Authentication required }
+
+  /departments:
+    get:
+      summary: Read active departments for alumni registration
+      responses:
+        "200": { description: "data.departments contains ID, code and name; archived departments excluded" }
+  /super-admin/overview:
+    get:
+      summary: All departments, admin vacancies and exact consolidated counts
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: "data.departments and data.totals; orphan alumni excluded, platform/unassigned events separate" }
+        "403": { description: Super Admin required }
+  /super-admin/analytics:
+    get:
+      summary: Consolidated department analytics using the same calculations as department dashboards
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: "data.departments and data.totals" }
+        "403": { description: Super Admin required }
+  /super-admin/departments:
+    get:
+      security: [{ cookieAuth: [] }]
+      summary: List active and archived departments
+      responses:
+        "200": { description: data.departments }
+    post:
+      security: [{ cookieAuth: [] }]
+      summary: Create a department with a unique immutable code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, name]
+              properties:
+                code: { type: string, pattern: '^[A-Z][A-Z0-9_-]{1,15}$' }
+                name: { type: string, minLength: 1, maxLength: 120 }
+      responses:
+        "201": { description: data.department }
+        "409": { description: Department code already exists }
+  /super-admin/departments/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    patch:
+      security: [{ cookieAuth: [] }]
+      summary: Rename, archive or reactivate a department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 120 }
+                isActive: { type: boolean }
+      responses:
+        "200": { description: data.department }
+        "409": { description: Deactivate current department admin first, or retry concurrent change }
+  /super-admin/admins:
+    get:
+      security: [{ cookieAuth: [] }]
+      summary: List department admins without credentials
+      responses:
+        "200": { description: data.admins }
+    post:
+      security: [{ cookieAuth: [] }]
+      summary: Provision one department admin with a temporary password shown once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, email, department]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 120 }
+                email: { type: string, format: email }
+                department: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+                existingUserId: { type: string, description: Explicitly selected unassigned admin or legacy college account }
+      responses:
+        "201": { description: "data.admin and data.temporaryPassword; Cache-Control no-store; password change required" }
+        "400": { description: Invalid fields or inactive department }
+        "409": { description: Department occupied, email conflict or concurrent change }
+  /super-admin/admins/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    patch:
+      security: [{ cookieAuth: [] }]
+      summary: Reassign, deactivate or reactivate a department admin and revoke all sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                department: { type: string }
+                isActive: { type: boolean }
+      responses:
+        "200": { description: Account updated, sessions revoked, historical ownership retained }
+        "409": { description: Conflicting active-admin assignment or concurrent change }
+  /super-admin/admins/{id}/reset-password:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    post:
+      security: [{ cookieAuth: [] }]
+      summary: Issue a new temporary password, require change and revoke existing sessions
+      responses:
+        "200": { description: "data.temporaryPassword returned once with no-store" }
+        "404": { description: Active department admin not found }
+  /super-admin/unassigned:
+    get:
+      security: [{ cookieAuth: [] }]
+      summary: Paginated assignment review queue
+      parameters:
+        - { in: query, name: type, schema: { type: string, enum: [alumni, admins, events, announcements], default: alumni } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+      responses:
+        "200": { description: "data.records and data.pagination; 20 records per page" }
+  /super-admin/assign/{type}/{id}:
+    parameters:
+      - { in: path, name: type, required: true, schema: { type: string, enum: [alumni, events, announcements] } }
+      - { in: path, name: id, required: true, schema: { type: string } }
+    patch:
+      security: [{ cookieAuth: [] }]
+      summary: Correct a department assignment without sending historical notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [department]
+              properties:
+                department: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+      responses:
+        "200": { description: Assignment corrected; alumni account sessions revoked when applicable }
+  /super-admin/audit:
+    get:
+      security: [{ cookieAuth: [] }]
+      summary: Append-only administrative audit history
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+      responses:
+        "200": { description: "data.entries and data.pagination; 25 records per page, no credentials or tokens" }
+  /admin/alumni-records:
+    get:
+      security: [{ cookieAuth: [] }]
+      summary: Paginated management records restricted to the current admin's department
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
+      responses:
+        "200": { description: "data.alumni and data.pagination; Super Admin can view all departments" }
+        "403": { description: Assigned active Department Admin or Super Admin required }
+  /announcements:
+    get:
+      security: [{ cookieAuth: [] }]
+      summary: Read announcements visible to current department and graduation batch plus platform announcements
+      responses:
+        "200": { description: data.announcements }
+    post:
+      security: [{ cookieAuth: [] }]
+      summary: Publish a department announcement or a Super Admin platform-wide announcement
+      description: Admin department is server-derived. Platform announcements target every batch. Attachment downloads, notifications and email recipients use the same audience rule. Historical notifications are never resent on assignment.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, message]
+              properties:
+                title: { type: string, maxLength: 200 }
+                message: { type: string, maxLength: 10000 }
+                batch: { type: string, description: All batches or a four-digit graduation year; Super Admin must use All batches }
+                attachment: { type: string, format: binary, description: PDF or supported image up to 5 MiB }
+      responses:
+        "201": { description: "data.announcement and data.recipientCount" }
+        "403": { description: Assigned active department admin or Super Admin required }
+  /announcements/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    patch:
+      security: [{ cookieAuth: [] }]
+      summary: Edit title/message within department ownership; audience is immutable
+      responses:
+        "200": { description: data.announcement }
+        "400": { description: Invalid fields or attempted audience change }
+        "404": { description: Announcement outside department or missing }
+    delete:
+      security: [{ cookieAuth: [] }]
+      summary: Delete an owned department announcement or Super Admin announcement
+      responses:
+        "200": { description: Announcement removed }
+        "404": { description: Announcement outside department or missing }
+  /uploads/announcements/{filename}:
+    parameters:
+      - { in: path, name: filename, required: true, schema: { type: string } }
+    get:
+      security: [{ cookieAuth: [] }]
+      summary: Download an attachment with identical feed audience checks
+      responses:
+        "200": { description: Attachment bytes }
+        "401": { description: Authentication required }
+        "404": { description: Missing attachment or outside current audience }
+  /event/create:
+    post:
+      security: [{ cookieAuth: [] }]
+      summary: Create a department event with selectable eligibility or a Super Admin platform event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, date, location, description]
+              properties:
+                title: { type: string }
+                date: { type: string, format: date-time }
+                location: { type: string }
+                description: { type: string }
+                scope: { type: string, enum: [department, platform], description: Only Super Admin can choose platform }
+                department: { type: string, description: Super Admin selects owning department; server-derived for department admins }
+                eligibility: { type: string, enum: [department, all], default: department, description: Platform events always use all }
+      responses:
+        "201": { description: data.event }
+        "403": { description: Publishing outside your department is forbidden }
+  /event/upcoming:
+    get:
+      summary: Public upcoming events open to all departments only
+      responses:
+        "200": { description: "data.events, at most ten, excludes private and unresolved events" }
+  /event/{id}/register:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    post:
+      security: [{ cookieAuth: [] }]
+      summary: Register or cancel attendance with server-enforced event audience eligibility
+      responses:
+        "200": { description: Registration or waitlist updated }
+        "404": { description: Event unavailable to current department }
+  /event/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    patch:
+      security: [{ cookieAuth: [] }]
+      summary: Update owned event details or eligibility while retaining fixed ownership
+      responses:
+        "200": { description: data.event }
+        "400": { description: Attempted ownership change or invalid eligibility }
+        "404": { description: Missing event or outside department }
+    delete:
+      security: [{ cookieAuth: [] }]
+      summary: Delete an owned event and its registrations
+      responses:
+        "200": { description: Event deleted }
+        "404": { description: Missing event or outside department }

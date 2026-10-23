@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const checkAuth = require("../middlewares/checkAuth");
 const {
@@ -8,8 +9,8 @@ const {
 
 const router = express.Router();
 router.use(checkAuth);
-router.get("/", listConversations);
-router.post("/", sendMessage);
-router.get("/:conversationId", getMessages);
+router.get("/", asyncHandler(listConversations));
+router.post("/", asyncHandler(sendMessage));
+router.get("/:conversationId", asyncHandler(getMessages));
 
 module.exports = router;

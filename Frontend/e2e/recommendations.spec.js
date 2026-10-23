@@ -68,3 +68,7 @@ test("recommendations show compatibility explanations and accept feedback", asyn
   await expect.poll(() => feedbackReceived).toBe(true);
   await expect(page.getByText(/feedback was saved/i)).toBeVisible();
 });
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/auth/csrf", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "success", data: { csrfToken: "mocked-ui-fixture" } }) }));
+});

@@ -4,7 +4,6 @@ import {
   FaBriefcase,
   FaBullhorn,
   FaCalendarAlt,
-  FaChartBar,
   FaComments,
   FaDonate,
   FaHandsHelping,
@@ -18,9 +17,6 @@ import {
   FaUserCircle,
   FaUserPlus,
   FaUsers,
-  FaShieldAlt,
-  FaPlay,
-  FaKey,
 } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import api from "../services/api";
@@ -36,10 +32,10 @@ const roleCopy = {
       "Find classmates, request mentorship, explore referrals, join events, and stay connected with the CMRIT community.",
   },
   admin: {
-    eyebrow: "Admin workspace",
-    title: "Manage the alumni platform.",
+    eyebrow: "Department Admin workspace",
+    title: "Manage your department.",
     description:
-      "Oversee alumni records, imports, announcements, events, job posts, reports, and recognition workflows.",
+      "Manage your department’s alumni, approvals, imports, announcements, events and reports.",
   },
   faculty: {
     eyebrow: "Faculty workspace",
@@ -64,52 +60,39 @@ const navByRole = {
     ["Mentorship", "/mentorship", FaHandsHelping],
     ["Career Referrals", "/career-referrals", FaBriefcase],
     ["Events", "/events", FaCalendarAlt],
-    ["Jobs", "/jobs", FaBriefcase],
+    ["Community Posts", "/community-posts", FaBriefcase],
     ["Resources", "/resources", FaBookOpen],
-    ["Stories", "/alumni-stories", FaUsers],
     ["Recognition", "/recognition", FaAward],
     ["Recommended", "/recommendations", FaBrain],
     ["AI Alumni Assistant", "/assistant", FaRobot],
     ["Network Graph", "/network-graph", FaProjectDiagram],
-    ["Model Evaluation", "/model-evaluation", FaChartBar],
-    ["Privacy & Trust", "/privacy", FaShieldAlt],
-    ["Account Security", "/account-security", FaKey],
-    ["Presentation Mode", "/demo", FaPlay],
   ],
   admin: [
     ["Dashboard", "/dashboard", FaIdBadge],
     ["Profile", "/profile", FaUserCircle],
-    ["Privacy & Trust", "/privacy", FaShieldAlt],
-    ["Account Security", "/account-security", FaKey],
     ["Manage Alumni", "/manage-alumni", FaSearch],
     ["Bulk Import", "/bulk-upload", FaUpload],
     ["Approvals", "/approvals", FaUserCheck],
     ["Mentorship Requests", "/admin-mentorship", FaHandsHelping],
     ["Announcements", "/announcements", FaBullhorn],
     ["Events", "/events", FaCalendarAlt],
-    ["Jobs", "/jobs", FaBriefcase],
+    ["Community Posts", "/community-posts", FaBriefcase],
     ["Reports", "/reports", FaComments],
     ["Recognition", "/recognition", FaAward],
-    ["Presentation Mode", "/demo", FaPlay],
   ],
   faculty: [
     ["Dashboard", "/dashboard", FaIdBadge],
     ["Profile", "/profile", FaUserCircle],
-    ["Privacy & Trust", "/privacy", FaShieldAlt],
-    ["Account Security", "/account-security", FaKey],
     ["Alumni Directory", "/alumni-directory", FaSearch],
     ["Mentorship", "/mentorship", FaHandsHelping],
     ["Announcements", "/announcements", FaBullhorn],
     ["Events", "/events", FaCalendarAlt],
     ["Forum", "/forum", FaComments],
     ["Resources", "/resources", FaBookOpen],
-    ["Stories", "/alumni-stories", FaUsers],
   ],
   college: [
     ["Dashboard", "/dashboard", FaIdBadge],
     ["Profile", "/profile", FaUserCircle],
-    ["Privacy & Trust", "/privacy", FaShieldAlt],
-    ["Account Security", "/account-security", FaKey],
     ["Bulk Import", "/bulk-upload", FaUpload],
     ["Announcements", "/announcements", FaBullhorn],
     ["Events", "/events", FaCalendarAlt],
@@ -248,7 +231,7 @@ function Dashboard() {
     avatar,
   } = user;
 
-  const activeRole = roleCopy[role] ? role : "alumni";
+  const activeRole = role === "college" ? "alumni" : roleCopy[role] ? role : "alumni";
   const displayName =
     activeRole === "admin"
       ? adminName || name || "Admin User"
@@ -308,7 +291,7 @@ function Dashboard() {
   const profileDetails =
     activeRole === "admin"
       ? [
-          ["Role", "Platform administrator"],
+          ["Role", "Department administrator"],
           ["Email", email || "Not added"],
           ["Focus", "Records and moderation"],
         ]
@@ -331,7 +314,7 @@ function Dashboard() {
             <div className="mb-5 flex items-center gap-3 border-b border-slate-200 pb-4">
               <img
                 src={logo}
-                alt="CMReunite Logo"
+                alt="CMRunite Logo"
                 className="h-11 w-11 rounded object-cover"
               />
             <div>

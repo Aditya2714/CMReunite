@@ -19,6 +19,7 @@ const createSocketServer = (httpServer) => {
     .map((origin) => origin.trim());
   const io = new Server(httpServer, {
     cors: { origin: origins, credentials: true },
+    allowRequest: (req, callback) => callback(null, !req.headers.origin || origins.includes(req.headers.origin)),
   });
 
   io.use(async (socket, next) => {
@@ -26,8 +27,9 @@ const createSocketServer = (httpServer) => {
       const cookies = parseCookies(socket.handshake.headers.cookie);
       const token = cookies.jwt || socket.handshake.auth?.token;
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select("_id role");
-      if (!user) return next(new Error("Authentication required"));
+      const user = await User.findById(decoded.id).select("_id role isActive authVersion mustChangePassword");
+      if (!user || user.isActive === false || user.mustChangePassword || (decoded.av || 0) !== (user.authVersion || 0)) return next(new Error("Authentication required"));
+      if (decoded.jti && !(await require("../models/authSessionModel").exists({ tokenId: decoded.jti, revokedAt: null, expiresAt: { $gt: new Date() } }))) return next(new Error("Session expired"));
       socket.user = user;
       return next();
     } catch {

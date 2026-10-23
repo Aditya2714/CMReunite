@@ -1,13 +1,19 @@
 import { expect, test } from "@playwright/test";
 
 const user = { id: "viewer", role: "alumni", email: "viewer@example.com", firstName: "Viewer" };
+const superAdmin = { id: "root", role: "super_admin", email: "root@example.com", name: "Super Admin" };
 
-test.beforeEach(async ({ page }) => {
+const mockCurrentUser = async (page, currentUser) => {
+  await page.unroute("**/auth/me");
   await page.route("**/auth/me", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify({ status: "success", data: { user } }),
+    body: JSON.stringify({ status: "success", data: { user: currentUser } }),
   }));
+};
+
+test.beforeEach(async ({ page }) => {
+  await mockCurrentUser(page, user);
 });
 
 test("grounded assistant shows parsed evidence and matches", async ({ page }) => {
@@ -57,6 +63,7 @@ test("network graph renders people and relationship counts", async ({ page }) =>
 });
 
 test("evaluation lab displays reproducible model metrics", async ({ page }) => {
+  await mockCurrentUser(page, superAdmin);
   await page.route("**/ml/evaluation", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -108,8 +115,20 @@ test("privacy centre saves enforceable contact preferences", async ({ page }) =>
 });
 
 test("presentation mode exposes the guided final-year demo", async ({ page }) => {
+  await mockCurrentUser(page, superAdmin);
   await page.goto("/demo");
-  await expect(page.getByText("CMReunite turns alumni records into an active career network.")).toBeVisible();
+  await expect(page.getByText("CMRunite turns alumni records into an active career network.")).toBeVisible();
   await expect(page.getByText("System architecture")).toBeVisible();
   await expect(page.getByRole("link", { name: "Start live demo" })).toHaveAttribute("href", "/assistant");
+});
+
+test("alumni cannot open technical demo pages directly", async ({ page }) => {
+  await page.goto("/model-evaluation");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto("/demo");
+  await expect(page).toHaveURL(/\/dashboard$/);
+});
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/auth/csrf", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "success", data: { csrfToken: "mocked-ui-fixture" } }) }));
 });

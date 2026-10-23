@@ -1,0 +1,303 @@
+[
+  {
+    "name": "members",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved"
+    },
+    "connected": [],
+    "options": {},
+    "expected": true
+  },
+  {
+    "name": "private",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved",
+      "privacy": {
+        "profileVisibility": "private"
+      }
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "network stranger",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved",
+      "privacy": {
+        "profileVisibility": "network"
+      }
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "network connected",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved",
+      "privacy": {
+        "profileVisibility": "network"
+      }
+    },
+    "connected": [
+      "candidate"
+    ],
+    "options": {},
+    "expected": true
+  },
+  {
+    "name": "inactive",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": false,
+      "isApproved": true,
+      "approvalStatus": "approved"
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "pending",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": false,
+      "approvalStatus": "pending"
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "rejected",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "rejected"
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "privileged",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "admin",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved"
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "viewer blocks",
+    "viewer": {
+      "_id": "viewer",
+      "blockedUsers": [
+        "candidate"
+      ]
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved"
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "candidate blocks",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved",
+      "blockedUsers": [
+        "viewer"
+      ]
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "connection opt-out",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved",
+      "privacy": {
+        "allowConnections": false
+      }
+    },
+    "connected": [],
+    "options": {
+      "purpose": "connect"
+    },
+    "expected": false
+  },
+  {
+    "name": "mentor opt-out",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved",
+      "privacy": {
+        "mentorshipAvailable": false
+      }
+    },
+    "connected": [],
+    "options": {
+      "purpose": "mentor"
+    },
+    "expected": false
+  },
+  {
+    "name": "opt-out stays in directory",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved",
+      "privacy": {
+        "allowConnections": false
+      }
+    },
+    "connected": [],
+    "options": {},
+    "expected": true
+  },
+  {
+    "name": "self excluded",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "viewer",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved"
+    },
+    "connected": [],
+    "options": {},
+    "expected": false
+  },
+  {
+    "name": "self private visible",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "viewer",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": "approved",
+      "privacy": {
+        "profileVisibility": "private"
+      }
+    },
+    "connected": [],
+    "options": {
+      "includeSelf": true
+    },
+    "expected": true
+  },
+  {
+    "name": "legacy status",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": {
+      "_id": "candidate",
+      "role": "alumni",
+      "isActive": true,
+      "isApproved": true,
+      "approvalStatus": null
+    },
+    "connected": [],
+    "options": {},
+    "expected": true
+  },
+  {
+    "name": "orphan account",
+    "viewer": {
+      "_id": "viewer"
+    },
+    "account": null,
+    "connected": [],
+    "options": {},
+    "expected": false
+  }
+]

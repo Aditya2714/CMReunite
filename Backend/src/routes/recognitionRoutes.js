@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -41,7 +42,7 @@ const uploadRecognitionFile = multer({
     ];
 
     if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error("Only JPG, JPEG, PNG, WebP, and PDF files are supported"));
+      return cb(Object.assign(new Error("Only JPG, JPEG, PNG, WebP, and PDF files are supported"), { status: 400 }));
     }
 
     cb(null, true);
@@ -49,9 +50,9 @@ const uploadRecognitionFile = multer({
 });
 
 router.use(checkAuth);
-router.get("/", getRecognitions);
-router.post("/", uploadRecognitionFile.single("file"), createRecognition);
-router.patch("/:id", uploadRecognitionFile.single("file"), updateRecognition);
-router.delete("/:id", deleteRecognition);
+router.get("/", asyncHandler(getRecognitions));
+router.post("/", asyncHandler(require("../services/departmentAccess").managementGuard), uploadRecognitionFile.single("file"), asyncHandler(createRecognition));
+router.patch("/:id", asyncHandler(require("../services/departmentAccess").managementGuard), uploadRecognitionFile.single("file"), asyncHandler(updateRecognition));
+router.delete("/:id", asyncHandler(require("../services/departmentAccess").managementGuard), asyncHandler(deleteRecognition));
 
 module.exports = router;

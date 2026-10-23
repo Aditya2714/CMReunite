@@ -17,42 +17,29 @@ const getAuthorName = async (user) => {
 const getStories = async (req, res) => {
   try {
     const stories = await Story.find().sort({ createdAt: -1 });
-    return res.status(200).json({ status: "success", data: { stories } });
+    return res.status(200).json({ status: "success", data: { stories: stories.map((story) => ({ ...story.toObject(), tag: story.category })) } });
   } catch (error) {
-    console.error("Error fetching stories:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("communityController.failed", error);
+    throw error;
   }
 };
 
-const createStory = async (req, res) => {
-  try {
-    const { title, tag, content } = req.body;
-    if (!title || !content) {
-      return res.status(400).json({ status: "fail", message: "Title and content are required" });
-    }
-
-    const story = await Story.create({
-      author: req.user._id,
-      authorName: await getAuthorName(req.user),
-      title,
-      tag,
-      content,
-    });
-
-    return res.status(201).json({ status: "success", data: { story } });
-  } catch (error) {
-    console.error("Error creating story:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
-  }
-};
+const createStory = require("./postController").handle(async (req, res) => {
+  const { post } = await require("../services/postService").createPostDocument(req.user, {
+    postType: "story", title: req.body.title, content: req.body.content,
+    ...(req.body.tag !== undefined ? { category: req.body.tag } : {}),
+  });
+  const story = { _id: post._id, author: post.author, authorName: post.authorName, title: post.title, content: post.content, tag: post.category, createdAt: post.createdAt, updatedAt: post.updatedAt };
+  res.status(201).json({ status: "success", data: { story } });
+});
 
 const getForumTopics = async (req, res) => {
   try {
     const topics = await ForumTopic.find().sort({ updatedAt: -1 });
     return res.status(200).json({ status: "success", data: { topics } });
   } catch (error) {
-    console.error("Error fetching forum topics:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("communityController.failed", error);
+    throw error;
   }
 };
 
@@ -73,8 +60,8 @@ const createForumTopic = async (req, res) => {
 
     return res.status(201).json({ status: "success", data: { topic } });
   } catch (error) {
-    console.error("Error creating forum topic:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    require("../utils/operationalLog").failure("communityController.failed", error);
+    throw error;
   }
 };
 
@@ -99,8 +86,8 @@ const addForumReply = async (req, res) => {
 
     return res.status(200).json({ status: "success", data: { topic } });
   } catch (error) {
-    console.error("Error adding forum reply:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("communityController.failed", error);
+    throw error;
   }
 };
 
@@ -109,8 +96,8 @@ const getResources = async (req, res) => {
     const resources = await Resource.find().sort({ createdAt: -1 });
     return res.status(200).json({ status: "success", data: { resources } });
   } catch (error) {
-    console.error("Error fetching resources:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("communityController.failed", error);
+    throw error;
   }
 };
 
@@ -132,8 +119,8 @@ const createResource = async (req, res) => {
 
     return res.status(201).json({ status: "success", data: { resource } });
   } catch (error) {
-    console.error("Error creating resource:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    require("../utils/operationalLog").failure("communityController.failed", error);
+    throw error;
   }
 };
 

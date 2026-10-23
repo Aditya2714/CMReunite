@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const checkAuth = require("../middlewares/checkAuth");
 const {
@@ -9,8 +10,8 @@ const {
 const router = express.Router();
 
 router.use(checkAuth);
-router.get("/", getReferralRequests);
-router.post("/", createReferralRequest);
-router.patch("/:referralId", updateReferralStatus);
+router.get("/", asyncHandler(getReferralRequests));
+router.post("/", asyncHandler(createReferralRequest));
+router.patch("/:referralId", asyncHandler(updateReferralStatus));
 
 module.exports = router;

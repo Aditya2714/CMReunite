@@ -9,7 +9,7 @@ const processQueue = async () => {
     try {
       await job.task();
     } catch (error) {
-      console.error(`Background job "${job.name}" failed:`, error.message);
+      require("../utils/operationalLog").failure(`background.${job.name}.failed`, error);
     }
   }
   processing = false;
@@ -22,4 +22,9 @@ const enqueue = (name, task) => {
 
 const getQueueStatus = () => ({ pending: queue.length, processing });
 
-module.exports = { enqueue, getQueueStatus };
+const drain = async (timeoutMs = 30000) => {
+  const deadline = Date.now() + timeoutMs;
+  while ((queue.length || processing) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
+  return !queue.length && !processing;
+};
+module.exports = { enqueue, getQueueStatus, drain };

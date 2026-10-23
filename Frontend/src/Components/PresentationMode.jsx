@@ -15,7 +15,7 @@ function PresentationMode() {
         <header className="grid min-h-[70vh] place-items-center text-center">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-teal-300">Final-year project presentation</p>
-            <h1 className="mx-auto mt-5 max-w-4xl text-4xl font-black tracking-tight md:text-7xl">CMReunite turns alumni records into an active career network.</h1>
+            <h1 className="mx-auto mt-5 max-w-4xl text-4xl font-black tracking-tight md:text-7xl">CMRunite turns alumni records into an active career network.</h1>
             <p className="mx-auto mt-6 max-w-2xl text-base font-semibold leading-7 text-slate-300">A secure, explainable and measurable platform for alumni discovery, mentoring, referrals, institutional engagement and intelligent recommendations.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link to="/assistant" className="primary-button"><FaPlay /> Start live demo</Link>

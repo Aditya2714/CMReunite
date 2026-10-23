@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
@@ -36,15 +37,15 @@ const upload = multer({
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only JPG, PNG, WebP, GIF, and PDF files are supported"));
+      cb(Object.assign(new Error("Only JPG, PNG, WebP, GIF, and PDF files are supported"), { status: 400 }));
     }
   },
 });
 
 router.use(checkAuth);
-router.get("/", getAnnouncements);
-router.post("/", upload.single("attachment"), createAnnouncement);
-router.patch("/:id", updateAnnouncement);
-router.delete("/:id", deleteAnnouncement);
+router.get("/", asyncHandler(getAnnouncements));
+router.post("/", asyncHandler(require("../services/departmentAccess").managementGuard), upload.single("attachment"), asyncHandler(createAnnouncement));
+router.patch("/:id", asyncHandler(updateAnnouncement));
+router.delete("/:id", asyncHandler(deleteAnnouncement));
 
 module.exports = router;

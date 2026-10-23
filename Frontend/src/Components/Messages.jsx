@@ -55,6 +55,7 @@ function Messages() {
     event.preventDefault();
     const selectedRecipient = recipientId || otherParticipant(selectedConversation)?._id;
     if (!selectedRecipient || !body.trim()) return;
+    if (body.trim().length > 2000) return setStatus("Messages must contain at most 2,000 characters.");
     try {
       const response = await api.post("/messages", {
         recipientId: selectedRecipient,

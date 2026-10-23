@@ -36,6 +36,11 @@ beforeAll(async () => {
   await mongoose.connect(mongo.getUri());
 });
 
+beforeEach(async () => {
+ const department = await require("../src/models/departmentModel").create({ code: "CSE", name: "Computer Science" });
+ alumniPayload.department = String(department._id);
+});
+
 afterEach(async () => {
   await Promise.all(
     Object.values(mongoose.connection.collections).map((collection) =>
@@ -171,7 +176,8 @@ test("an alumni user cannot update another alumni user's job", async () => {
     password: alumniPayload.password,
     role: "alumni",
   });
-  const response = await agent.patch(`/jobs/${job._id}`).send({ title: "Hijacked" });
+  const csrf = (await agent.get("/auth/csrf")).body.data.csrfToken;
+  const response = await agent.patch(`/jobs/${job._id}`).set("X-CSRF-Token", csrf).send({ title: "Hijacked" });
   expect(response.status).toBe(404);
   expect((await Job.findById(job._id)).title).toBe("Original");
 });

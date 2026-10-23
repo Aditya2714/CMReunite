@@ -1,0 +1,7 @@
+[Unit]
+Description=CMRunite encrypted database and upload backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/cmrunite/scripts/deploy.py scheduled-backup --env-file /secure/cmrunite/runtime.private.env --project cmrunite-production

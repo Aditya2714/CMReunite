@@ -31,7 +31,7 @@ const batchOptions = [
 
 function NewsLetter() {
   const user = useCurrentUser() || {};
-  const isAdmin = user.role === "admin";
+  const isAdmin = ["admin", "super_admin"].includes(user.role);
 
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -115,7 +115,7 @@ function NewsLetter() {
             Announcements
           </p>
           <h1 className="text-3xl font-extrabold tracking-normal md:text-4xl">
-            Stay updated with CMReunite
+            Stay updated with CMRunite
           </h1>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300 md:text-base">
             {isAdmin

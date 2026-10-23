@@ -87,3 +87,7 @@ test("password recovery does not reveal whether an account exists", async ({ pag
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(page.getByText(/if an approved account exists/i)).toBeVisible();
 });
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/auth/csrf", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "success", data: { csrfToken: "mocked-ui-fixture" } }) }));
+});

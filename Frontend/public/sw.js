@@ -1,4 +1,4 @@
-const CACHE = "cmreunite-shell-v1";
+const CACHE = "cmrunite-shell-v1";
 const SHELL = ["/", "/home", "/offline.html", "/manifest.webmanifest", "/pwa-icon.svg"];
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));

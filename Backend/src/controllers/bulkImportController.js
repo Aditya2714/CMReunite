@@ -1,203 +1,142 @@
+const crypto = require("node:crypto");
 const multer = require("multer");
 const Alumni = require("../models/alumniModel");
 const User = require("../models/user");
+const Department = require("../models/departmentModel");
+const { parseWorkbook, parseCsvRecords, normalizeHeader } = require("../services/alumniImportParser");
 
-const supportedExtensions = [".csv"];
-const supportedMimeTypes = [
-  "text/csv",
-  "application/csv",
-];
-
-const getFileExtension = (fileName = "") => {
-  const lowerName = fileName.toLowerCase();
-  return supportedExtensions.find((extension) => lowerName.endsWith(extension)) || "";
-};
+const supportedExtensions = [".csv", ".xlsx"];
+const supportedMimeTypes = ["text/csv", "application/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+const getFileExtension = (fileName = "") => supportedExtensions.find((extension) => fileName.toLowerCase().endsWith(extension)) || "";
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-  },
-  fileFilter: (req, file, cb) => {
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, callback) => {
     const extension = getFileExtension(file.originalname);
-    const isSupported =
-      supportedMimeTypes.includes(file.mimetype) || supportedExtensions.includes(extension);
-
-    if (!isSupported) {
-      return cb(new Error("Please upload a CSV file."));
+    if (!extension || (!supportedMimeTypes.includes(file.mimetype) && !supportedExtensions.includes(extension))) {
+      return callback(new Error("Please upload an XLSX workbook or CSV file."));
     }
-
-    cb(null, true);
+    callback(null, true);
   },
 }).single("file");
 
-const parseCsv = (content) => {
-  const rows = [];
-  let current = "";
-  let row = [];
-  let insideQuotes = false;
-
-  for (let index = 0; index < content.length; index += 1) {
-    const char = content[index];
-    const nextChar = content[index + 1];
-
-    if (char === "\"" && insideQuotes && nextChar === "\"") {
-      current += "\"";
-      index += 1;
-    } else if (char === "\"") {
-      insideQuotes = !insideQuotes;
-    } else if (char === "," && !insideQuotes) {
-      row.push(current.trim());
-      current = "";
-    } else if ((char === "\n" || char === "\r") && !insideQuotes) {
-      if (char === "\r" && nextChar === "\n") index += 1;
-      row.push(current.trim());
-      if (row.some((value) => value !== "")) rows.push(row);
-      row = [];
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  if (current || row.length) {
-    row.push(current.trim());
-    if (row.some((value) => value !== "")) rows.push(row);
-  }
-
-  return rows;
+const departmentAliases = {
+  cse: ["cse", "computerscience", "computerscienceandengineering"],
+  ece: ["ece", "electronics", "electronicsandcommunicationengineering"],
+  ise: ["ise", "informationscience", "informationscienceandengineering"],
+  mec: ["mec", "me", "mechanical", "mechanicalengineering"],
+  civ: ["civ", "cv", "civil", "civilengineering"],
+  eee: ["eee", "electricalandelectronicsengineering"],
+  aiml: ["aiml", "artificialintelligenceandmachinelearning"],
+  aids: ["aids", "artificialintelligenceanddatascience"],
+  tce: ["tce", "telecommunication", "telecommunicationengineering"],
+  mba: ["mba", "masterofbusinessadministration"],
+  mca: ["mca", "masterofcomputerapplications"],
 };
 
-const parseUploadedRows = async (file) => {
-  return parseCsv(file.buffer.toString("utf-8"));
+const aliasSet = (value) => {
+  const normalized = normalizeHeader(value);
+  const group = Object.values(departmentAliases).find((items) => items.includes(normalized));
+  return new Set(group || [normalized]);
 };
-
-const normalizeHeader = (header) =>
-  header
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-
-const getValue = (row, headerMap, names) => {
-  for (const name of names) {
-    const index = headerMap[normalizeHeader(name)];
-    if (index !== undefined && row[index] !== undefined) return row[index].trim();
-  }
-  return "";
+const findDepartment = (departments, hint) => {
+  if (!hint) return null;
+  const possible = aliasSet(hint);
+  return departments.find((department) => possible.has(normalizeHeader(department.code)) || possible.has(normalizeHeader(department.name))) || null;
+};
+const splitName = (record) => {
+  if (record.firstName) return { firstName: record.firstName, lastName: record.lastName || "" };
+  const parts = String(record.fullName || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return { firstName: parts[0] || "", lastName: "" };
+  return { firstName: parts.slice(0, -1).join(" "), lastName: parts.at(-1) };
+};
+const inferEducation = (record, departmentCode) => {
+  const endYear = Number.parseInt(record.endYear, 10);
+  const normalized = normalizeHeader(departmentCode || record.departmentHint || record.branch);
+  const degree = record.degree || (normalized === "mba" ? "MBA" : normalized === "mca" ? "MCA" : normalized ? "BE" : "Not added");
+  const duration = normalizeHeader(degree) === "mba" ? 2 : normalizeHeader(degree) === "mca" ? 3 : 4;
+  const startYear = Number.parseInt(record.startYear, 10) || (Number.isInteger(endYear) ? endYear - duration : NaN);
+  return { degree, startYear, endYear };
+};
+const addError = (summary, record, reason) => {
+  summary.skipped += 1;
+  summary.errorCount += 1;
+  if (summary.errors.length < 200) summary.errors.push({ sheet: record.sourceSheet, line: record.sourceLine, email: record.email || undefined, reason });
+};
+const normalizePhone = (value) => {
+  const digits = String(value || "").replace(/[^0-9]/g, "");
+  if (!digits || digits.length > 15) return undefined;
+  const number = Number(digits);
+  return Number.isSafeInteger(number) ? number : undefined;
 };
 
 const bulkImport = (req, res) => {
   upload(req, res, async (error) => {
     try {
-      if (error) {
-        return res.status(400).json({ status: "fail", message: error.message });
-      }
+      if (error) return res.status(400).json({ status: "fail", message: error.message });
+      if (!req.file) return res.status(400).json({ status: "fail", message: "XLSX workbook or CSV file is required" });
+      if (!["admin", "super_admin"].includes(req.user?.role)) return res.status(403).json({ status: "fail", message: "Only admins can bulk import alumni" });
 
-      if (!req.file) {
-        return res.status(400).json({ status: "fail", message: "CSV file is required" });
-      }
+      const extension = getFileExtension(req.file.originalname);
+      if (extension === ".csv" && req.file.buffer.includes(0)) return res.status(400).json({ status: "fail", message: "Binary content is not allowed in CSV uploads" });
+      const parsed = extension === ".xlsx" ? await parseWorkbook(req.file.buffer) : parseCsvRecords(req.file.buffer);
+      if (!parsed.records.length) return res.status(400).json({ status: "fail", message: "No alumni rows were found in the uploaded file" });
+      if (parsed.records.length > 5000) return res.status(400).json({ status: "fail", message: "Imports are limited to 5,000 alumni rows" });
 
-      if (req.user?.role !== "admin") {
-        return res.status(403).json({ status: "fail", message: "Only admin can bulk import alumni" });
-      }
+      const departments = await Department.find({ isActive: true }).select("code name").lean();
+      const summary = { format: extension.slice(1), imported: 0, skipped: 0, errorCount: 0, errors: [], sheets: parsed.sheets };
 
-      const rows = await parseUploadedRows(req.file);
-      if (req.file.buffer.includes(0)) {
-        return res.status(400).json({ status: "fail", message: "Binary content is not allowed in CSV uploads" });
-      }
-      if (rows.length < 2) {
-        return res.status(400).json({ status: "fail", message: "File must contain a header row and at least one data row" });
-      }
-      if (rows.length > 5001) {
-        return res.status(400).json({ status: "fail", message: "CSV imports are limited to 5,000 records" });
-      }
-
-      const headers = rows[0];
-      const headerMap = headers.reduce((map, header, index) => {
-        map[normalizeHeader(header)] = index;
-        return map;
-      }, {});
-
-      const summary = {
-        imported: 0,
-        skipped: 0,
-        errors: [],
-      };
-
-      for (const [rowIndex, row] of rows.slice(1).entries()) {
-        const lineNumber = rowIndex + 2;
-        const email = getValue(row, headerMap, ["email", "email address", "mail"]);
-        const firstName = getValue(row, headerMap, ["firstName", "first name", "name"]);
-        const lastName = getValue(row, headerMap, ["lastName", "last name"]);
-        const password = getValue(row, headerMap, ["password"]);
-        const startYear = getValue(row, headerMap, ["startYear", "start year"]);
-        const endYear = getValue(row, headerMap, ["endYear", "end year", "batch", "passing year"]);
-        const degree = getValue(row, headerMap, ["degree", "course"]);
-        const branch = getValue(row, headerMap, ["branch", "department"]);
-        const rollNumber =
-          getValue(row, headerMap, ["rollNumber", "roll number", "usn", "student id"]) ||
-          `ROLL-${Date.now()}-${lineNumber}`;
-        const company = getValue(row, headerMap, ["company", "current company"]);
-        const designation = getValue(row, headerMap, ["designation", "role", "job title"]);
-        const location = getValue(row, headerMap, ["location", "city"]);
-
-        if (!email || !firstName || !startYear || !endYear || !degree || !branch || password.length < 8) {
-          summary.skipped += 1;
-          summary.errors.push({
-            line: lineNumber,
-            reason: "Missing required fields or password is shorter than 8 characters",
-          });
-          continue;
+      for (const record of parsed.records) {
+        const email = String(record.email || "").trim().toLowerCase();
+        const { firstName, lastName } = splitName(record);
+        const department = findDepartment(departments, record.branch || record.departmentHint);
+        const education = inferEducation(record, department?.code);
+        if (!email || !/^\S+@\S+\.\S+$/.test(email)) { addError(summary, record, "A valid email ID is required"); continue; }
+        if (!firstName) { addError(summary, record, "Name is required"); continue; }
+        if (!Number.isInteger(education.endYear) || education.endYear < 1900 || education.endYear > 2100) { addError(summary, record, "Graduating year must be a valid year"); continue; }
+        if (req.user.role === "admin" && (!department || String(department._id) !== String(req.user.department))) {
+          addError(summary, record, "Department is unknown, archived, or outside your access"); continue;
         }
+        if (await User.exists({ email })) { addError(summary, record, "Email already exists"); continue; }
 
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-          summary.skipped += 1;
-          summary.errors.push({
-            line: lineNumber,
-            email,
-            reason: "Email already exists",
+        const generatedPassword = !record.password;
+        const password = record.password || `Aa1!${crypto.randomBytes(18).toString("base64url")}`;
+        if (password.length < 8) { addError(summary, record, "Password is shorter than 8 characters"); continue; }
+        let user;
+        try {
+          user = await User.create({
+            name: [firstName, lastName].filter(Boolean).join(" "), email, password, role: "alumni",
+            department: department?._id || null, isApproved: true, approvalStatus: "approved", mustChangePassword: generatedPassword,
           });
-          continue;
+          await Alumni.create({
+            user: user._id, department: department?._id || null, email,
+            startYear: education.startYear, endYear: education.endYear, degree: education.degree,
+            branch: department?.code || record.branch || record.departmentHint || "UNASSIGNED",
+            rollNumber: record.rollNumber || `IMPORT-${normalizeHeader(record.sourceSheet).toUpperCase() || "ROW"}-${education.endYear}-${record.sourceLine}`,
+            firstName, lastName, company: record.company, designation: record.designation || "Not added", domain: record.domain || "Not added",
+            location: record.location, mobileNumber: normalizePhone(record.phone),
+            socialProfiles: record.linkedin ? { linkedin: record.linkedin } : undefined,
+          });
+          summary.imported += 1;
+        } catch (rowError) {
+          if (user?._id) await User.deleteOne({ _id: user._id }).catch(() => {});
+          addError(summary, record, rowError.code === 11000 ? "Email already exists" : "Row could not be saved");
         }
-
-        const user = await User.create({
-          name: [firstName, lastName].filter(Boolean).join(" "),
-          email,
-          password,
-          role: "alumni",
-          isApproved: true,
-          approvalStatus: "approved",
-        });
-
-        await Alumni.create({
-          user: user._id,
-          email,
-          startYear,
-          endYear,
-          degree,
-          branch,
-          rollNumber,
-          firstName,
-          lastName,
-          company,
-          designation,
-          location,
-        });
-
-        summary.imported += 1;
       }
 
+      await require("../services/departmentAccess").audit(
+        req.user, "alumni.imported", extension.slice(1), req.user.department,
+        { imported: summary.imported, skipped: summary.skipped, sheets: summary.sheets.map((sheet) => sheet.name) },
+      );
+      require("../services/discoveryPolicy").invalidateDiscovery();
       return res.status(201).json({
-        status: "success",
-        message: "Bulk import completed",
-        data: summary,
+        status: "success", message: "Bulk import completed",
+        data: { ...summary, errorsTruncated: summary.errorCount > summary.errors.length },
       });
     } catch (importError) {
       console.error("Bulk import failed:", importError);
-      return res.status(500).json({
-        status: "fail",
-        message: importError.message || "Internal Server Error",
-      });
+      return res.status(500).json({ status: "fail", message: "Unable to process the import file" });
     }
   });
 };

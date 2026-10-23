@@ -1,0 +1,9 @@
+version: 1
+name: ML HTML failure
+protocol: http
+port: 4905
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ../ml/html-error.js
+    default: true

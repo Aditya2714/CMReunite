@@ -35,14 +35,14 @@ const getContributionCampaigns = async (req, res) => {
       data: { campaigns: campaigns.map(formatCampaign) },
     });
   } catch (error) {
-    console.error("Error fetching contribution campaigns:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("contributionController.failed", error);
+    throw error;
   }
 };
 
 const createContributionCampaign = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
+    if (!["admin", "super_admin"].includes(req.user.role)) {
       return res.status(403).json({ status: "fail", message: "Only admin can create contribution campaigns" });
     }
 
@@ -56,15 +56,18 @@ const createContributionCampaign = async (req, res) => {
       purpose,
       targetAmount: Number(targetAmount) || 0,
       createdBy: req.user._id,
+      department: req.user.department,
+      scope: req.user.role === "super_admin" ? "platform" : "department",
     });
 
+    await require("../services/departmentAccess").audit(req.user, "contribution.created", campaign._id, campaign.department);
     return res.status(201).json({
       status: "success",
       data: { campaign: formatCampaign(campaign) },
     });
   } catch (error) {
-    console.error("Error creating contribution campaign:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    require("../utils/operationalLog").failure("contributionController.failed", error);
+    throw error;
   }
 };
 
@@ -99,8 +102,8 @@ const pledgeContribution = async (req, res) => {
       data: { campaign: formatCampaign(campaign) },
     });
   } catch (error) {
-    console.error("Error pledging contribution:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    require("../utils/operationalLog").failure("contributionController.failed", error);
+    throw error;
   }
 };
 

@@ -6,6 +6,7 @@ const cleanObject = (document) => {
 };
 
 const serializeUser = (user, profile = null) => ({
+  ...(profile ? cleanObject(profile) : {}),
   id: user._id,
   user: user._id,
   name: user.name,
@@ -14,7 +15,9 @@ const serializeUser = (user, profile = null) => ({
   isApproved: user.isApproved,
   approvalStatus: user.approvalStatus,
   privacy: user.privacy,
-  ...(profile ? cleanObject(profile) : {}),
+  department: user.department,
+  isActive: user.isActive,
+  mustChangePassword: user.mustChangePassword,
   password: undefined,
 });
 

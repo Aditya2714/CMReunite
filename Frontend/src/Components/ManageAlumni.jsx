@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
+import { useCurrentUser } from "../services/authService";
 import {
   FaBuilding,
   FaEdit,
@@ -92,6 +93,10 @@ function getSearchValue(person, field) {
 }
 
 function ManageAlumni() {
+  const user = useCurrentUser();
+  const [departments, setDepartments] = useState([]);
+  const [transferDepartment, setTransferDepartment] = useState("");
+  useEffect(() => { if (user?.role === "super_admin") api.get("/departments").then(({data}) => setDepartments(data.data.departments)).catch(() => {}); }, [user?.role]);
   const [alumni, setAlumni] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -107,8 +112,15 @@ function ManageAlumni() {
     setMessage("");
 
     try {
-      const response = await api.get("/alumni");
-      setAlumni(response.data.data.alumni || []);
+      const records = [];
+      let page = 1, pages = 1;
+      do {
+        const response = await api.get("/admin/alumni-records", { params: { page, limit: 100 } });
+        records.push(...(response.data.data.alumni || []));
+        pages = response.data.data.pagination?.pages || 1;
+        page += 1;
+      } while (page <= pages);
+      setAlumni(records);
     } catch (fetchError) {
       setError(fetchError.response?.data?.message || "Unable to load alumni records.");
     } finally {
@@ -145,6 +157,7 @@ function ManageAlumni() {
 
   const startEdit = (person) => {
     setEditingId(person._id);
+    setTransferDepartment(person.department || "");
     setForm(toForm(person));
     setMessage("");
     setError("");
@@ -163,13 +176,16 @@ function ManageAlumni() {
     setMessage("");
 
     const payload = {
-      ...form,
+      ...Object.fromEntries(Object.entries(form).filter(([key]) => key !== "branch")),
       startYear: Number(form.startYear),
       endYear: Number(form.endYear),
       mobileNumber: form.mobileNumber ? Number(form.mobileNumber) : undefined,
     };
 
     try {
+      if (user?.role === "super_admin" && transferDepartment && transferDepartment !== alumni.find((person) => person._id === editingId)?.department) {
+        await api.patch(`/super-admin/assign/alumni/${editingId}`, { department: transferDepartment });
+      }
       const response = await api.patch(`/alumni/${editingId}`, payload);
       const updated = response.data.data.alumni;
       setAlumni((current) =>
@@ -301,6 +317,7 @@ function ManageAlumni() {
                   <input
                     type={type}
                     name={name}
+                    disabled={name === "branch"}
                     value={form[name]}
                     onChange={handleFormChange}
                     className={inputClass}
@@ -331,6 +348,7 @@ function ManageAlumni() {
               </label>
             </div>
 
+            {user?.role === "super_admin" && <label className="mt-4 block font-bold">Department assignment<select aria-label="Department assignment" value={transferDepartment} onChange={(event) => setTransferDepartment(event.target.value)} className={inputClass}><option value="">Unassigned</option>{departments.map((department) => <option key={department._id} value={department._id}>{department.code} — {department.name}</option>)}</select><span className="text-sm font-normal">Changing department revokes this alumnus’s existing sessions.</span></label>}
             <button
               type="submit"
               disabled={saving}

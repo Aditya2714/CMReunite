@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -44,7 +45,7 @@ const uploadProfileFile = multer({
     ];
 
     if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error("Only JPG, JPEG, PNG, WebP, and PDF files are supported"));
+      return cb(Object.assign(new Error("Only JPG, JPEG, PNG, WebP, and PDF files are supported"), { status: 400 }));
     }
 
     cb(null, true);
@@ -52,13 +53,13 @@ const uploadProfileFile = multer({
 });
 
 router.use(checkAuth);
-router.get("/me", getMyProfile);
-router.put("/me", uploadProfileFile.single("file"), updateMyProfile);
-router.get("/privacy", getPrivacySettings);
-router.patch("/privacy", updatePrivacySettings);
-router.post("/blocked/:userId", updateBlockedUser);
-router.delete("/blocked/:userId", updateBlockedUser);
-router.get("/export", exportMyData);
-router.get("/activity-summary", getMyActivitySummary);
+router.get("/me", asyncHandler(getMyProfile));
+router.put("/me", uploadProfileFile.single("file"), asyncHandler(updateMyProfile));
+router.get("/privacy", asyncHandler(getPrivacySettings));
+router.patch("/privacy", asyncHandler(updatePrivacySettings));
+router.post("/blocked/:userId", asyncHandler(updateBlockedUser));
+router.delete("/blocked/:userId", asyncHandler(updateBlockedUser));
+router.get("/export", asyncHandler(exportMyData));
+router.get("/activity-summary", asyncHandler(getMyActivitySummary));
 
 module.exports = router;

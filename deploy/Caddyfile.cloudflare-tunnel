@@ -1,0 +1,13 @@
+{
+  auto_https off
+  http_port 8080
+}
+
+:8080 {
+  # The public connection is HTTPS at Cloudflare. This listener remains bound
+  # to host loopback by the Compose override below.
+  header Strict-Transport-Security "max-age=31536000"
+  reverse_proxy frontend:8080 {
+    header_up X-Forwarded-Proto https
+  }
+}

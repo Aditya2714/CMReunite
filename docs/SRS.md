@@ -4,7 +4,7 @@
 
 ### 1.1 Purpose
 
-CMReunite provides a verified digital platform through which alumni and the
+CMRunite provides a verified digital platform through which alumni and the
 institution can discover people, form professional relationships, conduct
 mentorship, manage referrals, participate in events, exchange messages, and
 measure engagement.

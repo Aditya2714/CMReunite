@@ -1,0 +1,10 @@
+version: 1
+name: Internal recommendation service
+slug: internal-recommendation-service
+protocol: http
+port: 4905
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true
+interceptRequests: true

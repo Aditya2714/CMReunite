@@ -1,8 +1,8 @@
-# CMReunite: An Intelligent and Explainable Alumni Engagement Platform
+# CMRunite: An Intelligent and Explainable Alumni Engagement Platform
 
 ## Abstract
 
-CMReunite is a full-stack alumni engagement platform that converts fragmented
+CMRunite is a full-stack alumni engagement platform that converts fragmented
 institutional records into a verified, active and measurable professional
 network. It supports alumni onboarding, profile discovery, connections,
 real-time messaging, mentorship, referrals, events, jobs, communities,
@@ -36,7 +36,7 @@ explainably, respects personal-data choices and produces measurable outcomes.
 
 ### 1.3 Proposed solution
 
-CMReunite combines:
+CMRunite combines:
 
 - verified alumni profiles and privacy-aware discovery;
 - connection, messaging, mentorship and referral workflows;
@@ -275,7 +275,7 @@ assistant, graph, privacy, presentation and recovery behavior.
 
 ## 14. Conclusion
 
-CMReunite demonstrates how alumni data can support real, measurable engagement
+CMRunite demonstrates how alumni data can support real, measurable engagement
 rather than remain a static directory. The project integrates secure full-stack
 engineering, structured workflows, real-time communication, graph discovery,
 explainable machine learning, privacy controls and reproducible quality

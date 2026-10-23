@@ -69,13 +69,10 @@ PUBLIC_API_URL=http://127.0.0.1:4000
 FRONTEND_URL=http://127.0.0.1:5173
 ```
 
-Administrator and email variables are optional for basic browsing but required
-for the corresponding workflows:
+Email credentials are optional until delivery is enabled. Privileged accounts use
+the explicit `setup:super-admin` command; startup never creates an admin:
 
 ```dotenv
-ADMIN_NAME=CMRIT Admin
-ADMIN_EMAIL=
-ADMIN_PASSWORD=
 EMAIL_USER=
 EMAIL_PASS=
 ```
@@ -221,3 +218,5 @@ lsof -nP -iTCP:5173 -sTCP:LISTEN
 lsof -nP -iTCP:4000 -sTCP:LISTEN
 lsof -nP -iTCP:5001 -sTCP:LISTEN
 ```
+
+For department migration, backups, explicit Super Admin provisioning and rollout, follow the Super Admin and department administration section in the root README. Never apply production migrations from the test servers.

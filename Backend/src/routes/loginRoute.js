@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const { z } = require("zod");
 const checkAuth = require("../middlewares/checkAuth");
@@ -19,7 +20,7 @@ const router = express.Router();
 const loginSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
   password: z.string().min(1),
-  role: z.enum(["alumni", "admin"]),
+  role: z.enum(["alumni", "admin", "super_admin"]),
 });
 const passwordRule = z.string()
   .min(10)
@@ -29,20 +30,20 @@ const passwordRule = z.string()
   .regex(/[0-9]/, "Password needs a number")
   .regex(/[^A-Za-z0-9]/, "Password needs a symbol");
 
-router.post("/login", validate(loginSchema), loginController);
-router.post("/forgot-password", validate(z.object({ email: z.string().trim().email() })), forgotPassword);
+router.post("/login", validate(loginSchema), asyncHandler(loginController));
+router.post("/forgot-password", validate(z.object({ email: z.string().trim().email() })), asyncHandler(forgotPassword));
 router.post("/reset-password", validate(z.object({
   token: z.string().min(32).max(128),
   newPassword: passwordRule,
-})), resetPassword);
-router.get("/me", checkAuth, getCurrentUser);
-router.post("/logout", logout);
-router.post("/change-password", checkAuth, validate(z.object({
+})), asyncHandler(resetPassword));
+router.get("/me", asyncHandler(checkAuth), asyncHandler(getCurrentUser));
+router.post("/logout", asyncHandler(logout));
+router.post("/change-password", asyncHandler(checkAuth), validate(z.object({
   currentPassword: z.string().min(1).max(128),
   newPassword: passwordRule,
-})), changePassword);
-router.get("/sessions", checkAuth, listSessions);
-router.delete("/sessions/:sessionId", checkAuth, revokeSession);
-router.post("/logout-all", checkAuth, logoutAll);
+})), asyncHandler(changePassword));
+router.get("/sessions", asyncHandler(checkAuth), asyncHandler(listSessions));
+router.delete("/sessions/:sessionId", asyncHandler(checkAuth), asyncHandler(revokeSession));
+router.post("/logout-all", asyncHandler(checkAuth), asyncHandler(logoutAll));
 
 module.exports = router;

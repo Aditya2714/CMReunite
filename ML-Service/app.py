@@ -1,3 +1,4 @@
+from discovery_policy import eligible, visible
 import logging
 import os
 import re
@@ -6,6 +7,10 @@ from datetime import datetime, timezone
 import numpy as np
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from pathlib import Path
+if os.getenv("MONGO_URI_FILE"):
+    os.environ["MONGO_URI"] = Path(os.environ["MONGO_URI_FILE"]).read_text().strip()
+
 from pymongo import MongoClient
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -251,23 +256,17 @@ def recommend():
         if mode not in MODE_WEIGHTS:
             return jsonify({"status": "fail", "message": "Unsupported recommendation mode"}), 400
 
+        viewer = db.users.find_one({"_id": _object_id(user_id)}, {"password": 0, "passwordResetTokenHash": 0})
+        if not eligible(viewer):
+            return jsonify({"status": "fail", "message": "Approved alumni access required"}), 403
         target = db.alumnis.find_one({"user": _object_id(user_id)})
         if not target:
-            return jsonify({
-                "status": "success",
-                "data": {
-                    "recommendations": [],
-                    "mode": mode,
-                    "modelVersion": MODEL_VERSION,
-                    "coldStart": True,
-                    "message": "Complete your alumni profile to receive recommendations.",
-                },
-            })
-
-        candidates = list(db.alumnis.find({
-            "user": {"$ne": target.get("user")},
-            "verified": True,
-        }))
+            return jsonify({"status": "success", "data": {"recommendations": [], "mode": mode, "modelVersion": MODEL_VERSION, "coldStart": True, "message": "Complete your alumni profile to receive recommendations."}})
+        relationships = db.connections.find({"status": "accepted", "$or": [{"requester": viewer["_id"]}, {"recipient": viewer["_id"]}]})
+        connected = {str(item["recipient"] if item["requester"] == viewer["_id"] else item["requester"]) for item in relationships}
+        accounts = db.users.find({"role": "alumni", "isApproved": True, "isActive": {"$ne": False}, "approvalStatus": {"$nin": ["pending", "rejected"]}}, {"password": 0, "passwordResetTokenHash": 0})
+        candidate_ids = [account["_id"] for account in accounts if visible(viewer, account, connected, purpose="mentor" if mode == "mentor" else "connect" if mode == "network" else "discovery")]
+        candidates = list(db.alumnis.find({"user": {"$in": candidate_ids}, "verified": True}))
         feedback = list(db.recommendationfeedbacks.find({"viewer": target.get("user")}))
         recommendations = rank_profiles(target, candidates, mode, top_n, feedback)
         completeness_fields = ["branch", "domain", "designation", "skills", "bio", "company"]

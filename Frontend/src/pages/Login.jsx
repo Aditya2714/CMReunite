@@ -12,6 +12,7 @@ import graduationIllustration from "../assets/img/graduation_illustration.svg";
 function Login() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   const [user, setUser] = useState({
     email: "",
@@ -23,7 +24,8 @@ function Login() {
 
   const roleOptions = [
     { value: "alumni", label: "Alumni" },
-    { value: "admin", label: "Admin" },
+    { value: "admin", label: "Department Admin" },
+    { value: "super_admin", label: "Super Admin" },
   ];
 
   const handleRoleChange = (selectedOption) => {
@@ -37,6 +39,7 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoginError("");
 
     if (!selectedRole) {
       toast.error("Please select a role");
@@ -56,23 +59,18 @@ function Login() {
     try {
       const response = await api.post(url, userData);
 
-      const payload = {
-        ...(selectedRole.value === "alumni"
-          ? response.data.alumni
-          : response.data.admin),
-        role: selectedRole.value,
-      };
+      const payload = response.data.user;
 
       dispatch(login(payload));
 
       toast.success("Login Successful");
 
-      navigate("/dashboard");
+      navigate(payload.mustChangePassword ? "/account-security" : payload.role === "super_admin" ? "/super-admin" : "/dashboard");
     } catch (err) {
       if (err.response) {
-        toast.error(err.response.data.message || "Login failed");
+        setLoginError(err.response.data.message || "Login failed");
       } else {
-        toast.error("Backend not reachable. Check server.");
+        setLoginError("Backend not reachable. Check server.");
       }
     } finally {
       setLoading(false);
@@ -102,13 +100,14 @@ function Login() {
             </p>
           </aside>
           <form onSubmit={handleSubmit} className="space-y-5 p-7 sm:p-10 lg:p-12">
+            {loginError && <p role="alert" className="whitespace-pre-wrap break-words rounded-lg bg-red-50 p-4 text-sm font-semibold text-red-700">{loginError}</p>}
             <div>
               <p className="eyebrow">Member access</p>
               <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
                 Sign in to your account
               </h2>
               <p className="mt-3 text-sm font-semibold text-slate-500">
-                New to CMReunite?{" "}
+                New to CMRunite?{" "}
                 <Link to="/register" className="text-blue-700 hover:underline">
                   Create an account
                 </Link>

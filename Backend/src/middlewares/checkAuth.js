@@ -39,11 +39,19 @@ const checkAuth = async (req, res, next) => {
       });
     }
 
+    if (user.isActive === false || (decoded.av || 0) !== (user.authVersion || 0)) {
+      return res.status(401).json({ status: "fail", message: "Account or session is no longer active" });
+    }
+    const route = req.originalUrl.split("?")[0];
+    if (user.mustChangePassword && !["/auth/me", "/auth/change-password", "/auth/logout", "/auth/logout-all", "/auth/sessions"].includes(route)) {
+      return res.status(403).json({ status: "fail", message: "Change your temporary password before continuing" });
+    }
+    if (user.role === "alumni") user.graduationYear = (await require("../models/alumniModel").findOne({ user: user._id }).select("endYear"))?.endYear;
     req.user = user;
     req.auth = decoded;
     next();
   } catch (error) {
-    console.error("Error during authentication:", error);
+    if (!["JsonWebTokenError", "TokenExpiredError", "NotBeforeError"].includes(error.name)) return next(error);
     return res.status(401).json({
       status: "fail",
       message: "Invalid or expired login session",

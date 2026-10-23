@@ -1,3 +1,4 @@
+const access = require("../services/departmentAccess");
 const Alumni = require("../models/alumniModel");
 const Mentorship = require("../models/mentorshipModel");
 const User = require("../models/user");
@@ -33,19 +34,7 @@ const getMentors = async (req, res) => {
       return res.status(403).json({ status: "fail", message: "Only alumni can view mentors" });
     }
 
-    const approvedUsers = await User.find({
-      role: "alumni",
-      isApproved: true,
-      "privacy.mentorshipAvailable": { $ne: false },
-      blockedUsers: { $ne: req.user._id },
-      _id: { $ne: req.user._id, $nin: req.user.blockedUsers || [] },
-    }).select("_id");
-    const mentors = await Alumni.find({
-      user: { $in: approvedUsers.map((user) => user._id) },
-      verified: true,
-    })
-      .sort({ firstName: 1, lastName: 1 })
-      .limit(100);
+    const mentors = (await require("../services/discoveryPolicy").visibleProfiles(req.user, { purpose: "mentor" }, { verified: true })).sort((a, b) => a.firstName.localeCompare(b.firstName)).slice(0, 100);
 
     return res.status(200).json({
       status: "success",
@@ -53,15 +42,17 @@ const getMentors = async (req, res) => {
       data: { mentors: mentors.map(formatMentor) },
     });
   } catch (error) {
-    console.error("Error fetching mentors:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("mentorshipController.failed", error);
+    throw error;
   }
 };
 
 const getMentorshipRequests = async (req, res) => {
   try {
-    if (req.user.role === "admin") {
-      const requests = await Mentorship.find().sort({ createdAt: -1 });
+    if (access.managementRole(req.user)) {
+      await access.requireManagement(req.user);
+      const ids = await access.departmentUserIds(req.user);
+      const requests = await Mentorship.find(ids ? { requester: { $in: ids } } : {}).sort({ createdAt: -1 });
 
       return res.status(200).json({
         status: "success",
@@ -81,8 +72,8 @@ const getMentorshipRequests = async (req, res) => {
       data: { requests: sent, sent, received },
     });
   } catch (error) {
-    console.error("Error fetching mentorship requests:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("mentorshipController.failed", error);
+    throw error;
   }
 };
 
@@ -97,7 +88,8 @@ const createMentorshipRequest = async (req, res) => {
       return res.status(400).json({ status: "fail", message: "Topic, mentor, and message are required" });
     }
 
-    const mentorProfile = await Alumni.findById(mentorId);
+    if (!/^[a-f0-9]{24}$/i.test(String(mentorId))) return res.status(400).json({ status: "fail", message: "Invalid mentor ID" });
+    const mentorProfile = await require("../services/discoveryPolicy").requireVisibleProfile(req.user, mentorId, "mentor");
     if (!mentorProfile) {
       return res.status(404).json({ status: "fail", message: "Selected mentor not found" });
     }
@@ -151,8 +143,8 @@ const createMentorshipRequest = async (req, res) => {
       data: { request },
     });
   } catch (error) {
-    console.error("Error creating mentorship request:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    require("../utils/operationalLog").failure("mentorshipController.failed", error);
+    throw error;
   }
 };
 
@@ -162,7 +154,8 @@ const addMentorshipMilestone = async (req, res) => {
     if (!request) return res.status(404).json({ status: "fail", message: "Mentorship request not found" });
     const isParticipant = [request.requester, request.mentor]
       .filter(Boolean).some((id) => id.toString() === req.user._id.toString());
-    if (!isParticipant && req.user.role !== "admin") {
+    if (access.managementRole(req.user)) { await access.requireManagement(req.user); if (!access.isSuper(req.user) && !(await Alumni.exists({ user: request.requester, department: req.user.department }))) access.fail(404, "Mentorship not found in your department"); }
+    if (!isParticipant && !access.managementRole(req.user)) {
       return res.status(403).json({ status: "fail", message: "Only mentorship participants can update progress" });
     }
     const { title, note, milestoneId, completed } = req.body;
@@ -186,10 +179,11 @@ const addMentorshipMilestone = async (req, res) => {
       return res.status(400).json({ status: "fail", message: "Add a milestone, note, or progress update" });
     }
     await request.save();
+    if (access.managementRole(req.user)) await access.audit(req.user, "mentorship.updated", request._id, req.user.department);
     return res.status(200).json({ status: "success", data: { request } });
   } catch (error) {
-    console.error("Mentorship progress update failed:", error);
-    return res.status(500).json({ status: "fail", message: "Unable to update mentorship progress" });
+    require("../utils/operationalLog").failure("mentorshipController.failed", error);
+    throw error;
   }
 };
 
@@ -214,7 +208,8 @@ const updateMentorshipStatus = async (req, res) => {
       return res.status(404).json({ status: "fail", message: "Mentorship request not found" });
     }
 
-    const isAdmin = req.user.role === "admin";
+    const isAdmin = access.managementRole(req.user);
+    if (isAdmin) { await access.requireManagement(req.user); if (!access.isSuper(req.user) && !(await Alumni.exists({ user: request.requester, department: req.user.department }))) access.fail(404, "Mentorship not found in your department"); }
     const isAssignedMentor = request.mentor?.toString() === req.user._id.toString();
     const isRequester = request.requester.toString() === req.user._id.toString();
 
@@ -244,6 +239,7 @@ const updateMentorshipStatus = async (req, res) => {
     if (feedback !== undefined) request.feedback = feedback;
     if (request.status === "completed" && !request.completedAt) request.completedAt = new Date();
     await request.save();
+    if (access.managementRole(req.user)) await access.audit(req.user, "mentorship.updated", request._id, req.user.department);
 
     const recipient = isRequester ? request.mentor : request.requester;
     await notify({
@@ -260,8 +256,8 @@ const updateMentorshipStatus = async (req, res) => {
       data: { request },
     });
   } catch (error) {
-    console.error("Error updating mentorship status:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("mentorshipController.failed", error);
+    throw error;
   }
 };
 

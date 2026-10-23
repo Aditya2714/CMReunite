@@ -1,0 +1,12 @@
+const asyncHandler = require("../middlewares/asyncHandler");
+const router = require("express").Router();
+const checkAuth = require("../middlewares/checkAuth");
+const controller = require("../controllers/postController");
+router.use(checkAuth);
+router.get("/settings", asyncHandler(controller.getSettings));
+router.get("/", asyncHandler(controller.listPosts));
+router.post("/", asyncHandler(controller.createPost));
+router.get("/:id", asyncHandler(controller.getPost));
+router.patch("/:id", asyncHandler(controller.updatePost));
+router.delete("/:id", asyncHandler(controller.deletePost));
+module.exports = router;

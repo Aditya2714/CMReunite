@@ -1,0 +1,7 @@
+# Cloudflare terminates public TLS and connects only to this loopback listener.
+# Use this together with docker-compose.production.yml, never by itself.
+services:
+  edge:
+    ports: !override ["127.0.0.1:18080:8080"]
+    volumes:
+      - ./deploy/Caddyfile.cloudflare-tunnel:/etc/caddy/Caddyfile:ro

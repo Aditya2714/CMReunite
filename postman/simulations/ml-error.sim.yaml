@@ -1,0 +1,9 @@
+simulation: ml-error
+routing: path
+mocks:
+  - routeKey: ml
+    path: ../mocks/ml/config.yaml
+    scenarios:
+      - overrides:
+          conditions:
+            error: { status_code: 500 }

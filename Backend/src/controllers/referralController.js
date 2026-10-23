@@ -1,3 +1,4 @@
+const access = require("../services/departmentAccess");
 const Alumni = require("../models/alumniModel");
 const Referral = require("../models/referralModel");
 const User = require("../models/user");
@@ -14,9 +15,11 @@ const getRequesterName = async (user) => {
 
 const getReferralRequests = async (req, res) => {
   try {
+    if (access.managementRole(req.user)) await access.requireManagement(req.user);
+    const ids = access.managementRole(req.user) ? await access.departmentUserIds(req.user) : null;
     const query =
-      req.user.role === "admin"
-        ? {}
+      access.managementRole(req.user)
+        ? (ids ? { requester: { $in: ids } } : {})
         : { $or: [{ requester: req.user._id }, { assignedTo: req.user._id }] };
     const referrals = await Referral.find(query).sort({ createdAt: -1 });
 
@@ -26,8 +29,8 @@ const getReferralRequests = async (req, res) => {
       data: { referrals },
     });
   } catch (error) {
-    console.error("Error fetching referral requests:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("referralController.failed", error);
+    throw error;
   }
 };
 
@@ -62,8 +65,8 @@ const createReferralRequest = async (req, res) => {
       data: { referral },
     });
   } catch (error) {
-    console.error("Error creating referral request:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    require("../utils/operationalLog").failure("referralController.failed", error);
+    throw error;
   }
 };
 
@@ -79,7 +82,8 @@ const updateReferralStatus = async (req, res) => {
     if (!referral) {
       return res.status(404).json({ status: "fail", message: "Referral request not found" });
     }
-    const isAdmin = req.user.role === "admin";
+    const isAdmin = access.managementRole(req.user);
+    if (isAdmin) { await access.requireManagement(req.user); if (!access.isSuper(req.user) && !(await Alumni.exists({ user: referral.requester, department: req.user.department }))) access.fail(404, "Referral not found in your department"); }
     const isRequester = referral.requester.toString() === req.user._id.toString();
     const isAssignee = referral.assignedTo?.toString() === req.user._id.toString();
     if (!isAdmin && !(isRequester && status === "withdrawn") && !isAssignee) {
@@ -100,6 +104,7 @@ const updateReferralStatus = async (req, res) => {
       referral.assignedTo = assignee._id;
       referral.assignedToName = assignee.name || assignee.email;
       referral.status = "assigned";
+      await referral.save();
       await notify({
         recipient: assignee._id,
         type: "referral",
@@ -120,6 +125,7 @@ const updateReferralStatus = async (req, res) => {
       changedBy: req.user._id,
     });
     await referral.save();
+    if (isAdmin) await access.audit(req.user, "referral.updated", referral._id, req.user.department);
     if (!isRequester) {
       await notify({
         recipient: referral.requester,
@@ -136,8 +142,8 @@ const updateReferralStatus = async (req, res) => {
       data: { referral },
     });
   } catch (error) {
-    console.error("Error updating referral status:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("referralController.failed", error);
+    throw error;
   }
 };
 

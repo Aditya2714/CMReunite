@@ -5,7 +5,7 @@ const { notify } = require("../services/notificationService");
 
 const createEventController = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
+    if (!["admin", "super_admin"].includes(req.user.role)) {
       return res.status(403).json({ status: "fail", message: "Admin access required" });
     }
     const {
@@ -27,6 +27,7 @@ const createEventController = async (req, res) => {
     }
 
     const event = await Event.create({
+      ...req.eventOwnership,
       title,
       date,
       location,
@@ -39,6 +40,7 @@ const createEventController = async (req, res) => {
       createdBy: req.user._id,
     });
 
+    await require("../services/departmentAccess").audit(req.user, "event.created", event._id, event.department);
     res.status(201).json({
       status: "success",
       data: {
@@ -46,17 +48,14 @@ const createEventController = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error creating event:", error);
-    res.status(500).json({
-      status: "fail",
-      message: "Internal Server Error",
-    });
+    require("../utils/operationalLog").failure("eventController.failed", error);
+    throw error;
   }
 };
 
 const getAllEventsController = async (req, res) => {
   try {
-    const events = await Event.find()
+    const events = await Event.find(require("../services/departmentAccess").eventAudienceFilter(req.user))
       .populate("createdBy", "name email role")
       .sort({ date: 1 });
     const registrations = await EventRegistration.find({ user: req.user._id });
@@ -79,11 +78,8 @@ const getAllEventsController = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching events:", error);
-    res.status(500).json({
-      status: "fail",
-      message: "Internal Server Error",
-    });
+    require("../utils/operationalLog").failure("eventController.failed", error);
+    throw error;
   }
 };
 
@@ -174,14 +170,14 @@ const toggleEventRegistrationController = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error updating event registration:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    require("../utils/operationalLog").failure("eventController.failed", error);
+    throw error;
   }
 };
 
 const updateEventController = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
+    if (!["admin", "super_admin"].includes(req.user.role)) {
       return res.status(403).json({ status: "fail", message: "Admin access required" });
     }
 
@@ -195,6 +191,7 @@ const updateEventController = async (req, res) => {
       "capacity",
       "registrationDeadline",
       "isRegistrationOpen",
+      "eligibility",
     ];
     const updates = {};
     allowedFields.forEach((field) => {
@@ -210,19 +207,20 @@ const updateEventController = async (req, res) => {
       return res.status(404).json({ status: "fail", message: "Event not found" });
     }
 
+    await require("../services/departmentAccess").audit(req.user, "event.updated", event._id, event.department);
     return res.status(200).json({
       status: "success",
       data: { event },
     });
   } catch (error) {
-    console.error("Error updating event:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("eventController.failed", error);
+    throw error;
   }
 };
 
 const deleteEventController = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
+    if (!["admin", "super_admin"].includes(req.user.role)) {
       return res.status(403).json({ status: "fail", message: "Admin access required" });
     }
 
@@ -231,6 +229,7 @@ const deleteEventController = async (req, res) => {
     if (!event) {
       return res.status(404).json({ status: "fail", message: "Event not found" });
     }
+    await require("../services/departmentAccess").audit(req.user, "event.deleted", event._id, event.department);
     await EventRegistration.deleteMany({ event: event._id });
 
     return res.status(200).json({
@@ -238,14 +237,14 @@ const deleteEventController = async (req, res) => {
       message: "Event deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting event:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("eventController.failed", error);
+    throw error;
   }
 };
 
 const checkInEventAttendee = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
+    if (!["admin", "super_admin"].includes(req.user.role)) {
       return res.status(403).json({ status: "fail", message: "Admin access required" });
     }
     const code = String(req.body.checkInCode || "").trim().toUpperCase();
@@ -268,16 +267,17 @@ const checkInEventAttendee = async (req, res) => {
       link: "/events",
       metadata: { eventId: req.params.id },
     });
+    await require("../services/departmentAccess").audit(req.user, "event.checked_in", registration._id, (await Event.findById(req.params.id)).department);
     return res.status(200).json({ status: "success", data: { registration } });
   } catch (error) {
-    console.error("Event check-in failed:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("eventController.failed", error);
+    throw error;
   }
 };
 
 const getUpcomingEventsController = async (req, res) => {
   try {
-    const events = await Event.find({ date: { $gte: new Date() } })
+    const events = await Event.find({ date: { $gte: new Date() }, eligibility: "all", $or: [{ scope: "platform" }, { scope: "department", department: { $ne: null } }] })
       .select("title date location time type")
       .sort({ date: 1 })
       .limit(10);
@@ -287,8 +287,8 @@ const getUpcomingEventsController = async (req, res) => {
       data: { events },
     });
   } catch (error) {
-    console.error("Error fetching upcoming events:", error);
-    res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("eventController.failed", error);
+    throw error;
   }
 };
 

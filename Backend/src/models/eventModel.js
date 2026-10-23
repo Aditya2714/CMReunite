@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 
 const eventSchema = new mongoose.Schema({
+    department: { type: mongoose.Schema.Types.ObjectId, ref: "Department", default: null },
+    eligibility: { type: String, enum: ["department", "all"], default: "department" },
+    scope: { type: String, enum: ["department", "platform", "unassigned"], default: "unassigned" },
   title: {
     type: String,
     required: true,

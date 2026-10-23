@@ -60,7 +60,7 @@ function PrivacyCenter() {
     const url = URL.createObjectURL(response.data);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `cmreunite-my-data-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.download = `cmrunite-my-data-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
   };

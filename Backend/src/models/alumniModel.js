@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const AlumniSchema = new mongoose.Schema(
   {
+    department: { type: mongoose.Schema.Types.ObjectId, ref: "Department", default: null },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

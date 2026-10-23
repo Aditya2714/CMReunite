@@ -1,0 +1,20 @@
+openapi: 3.1.0
+info: { title: Internal recommendation service, version: 1.0.0 }
+paths:
+  /recommend:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [userId], properties: { userId: { type: string }, mode: { type: string }, topN: { type: integer } } }
+      responses:
+        '200':
+          description: Ranked eligible candidates
+          content:
+            application/json:
+              schema: { type: object, properties: { status: { type: string }, data: { type: object, properties: { recommendations: { type: array, items: { type: object } } } } } }
+        '500':
+          description: Recommendation service error
+          content:
+            application/json:
+              schema: { type: object, properties: { status: { type: string }, message: { type: string } } }

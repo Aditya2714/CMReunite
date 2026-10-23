@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const router = express.Router();
 
@@ -25,16 +26,19 @@ const assistantRoutes = require("./assistantRoutes");
 const networkRoutes = require("./networkRoutes");
 
 // ✅ root test
-router.get("/", (req, res) => {
+router.get("/", asyncHandler((req, res) => {
   console.log("Server is up and running.");
   res.send("Server is up and running.");
-});
+}));
 
 // ✅ routes
+router.get("/departments", asyncHandler(require("../controllers/superAdminController").publicDepartments));
+router.use("/super-admin", require("./superAdminRoutes"));
 router.use("/register", registerRoute);
 router.use("/event", publicEventRoutes);
 router.use("/event", eventRoutes);
 router.use("/auth", loginRoute);   // 👉 IMPORTANT
+router.use("/posts", require("./postRoutes"));
 router.use("/jobs", jobRoutes);
 router.use("/bulk", bulkImportRoute);
 router.use("/profile", profileRoutes);

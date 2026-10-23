@@ -5,12 +5,17 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "node --watch server.js",
     "test": "node --test tests/*.node.test.js",
     "test:integration": "jest --runInBand --config jest.integration.config.js",
     "test:watch": "node --test --watch tests/security.node.test.js",
+    "migrate:community-posts": "node scripts/migrateCommunityPosts.js",
+    "setup:super-admin": "node scripts/setupSuperAdmin.js",
+    "migrate:departments": "node scripts/migrateDepartments.js",
     "migrate:credentials": "node scripts/migrateCredentials.js",
-    "seed:demo": "node scripts/seedDemoData.js"
+    "seed:demo": "node scripts/seedDemoData.js",
+    "migrate:notification-index": "node scripts/migrateNotificationIndex.js",
+    "verify:email": "node scripts/verifyEmail.js"
   },
   "author": "Aditya Prakash",
   "license": "ISC",
@@ -18,15 +23,17 @@
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "csrf-csrf": "^4.0.3",
     "dotenv": "^16.6.1",
+    "exceljs": "^4.4.0",
     "express": "^4.22.2",
     "express-rate-limit": "^8.6.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^6.3.0",
     "mongoose": "^8.24.1",
-    "multer": "^1.4.5-lts.1",
-    "nodemailer": "^9.0.3",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.1.6",
     "sharp": "^0.35.3",
     "socket.io": "^4.8.3",
     "zod": "^4.4.3"
@@ -34,7 +41,12 @@
   "devDependencies": {
     "jest": "^30.4.2",
     "mongodb-memory-server": "^11.2.0",
-    "nodemon": "^3.0.2",
     "supertest": "^7.2.2"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
   }
 }

@@ -1,3 +1,4 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const express = require("express");
 const checkAuth = require("../middlewares/checkAuth");
 const {
@@ -9,8 +10,8 @@ const {
 const router = express.Router();
 
 router.use(checkAuth);
-router.get("/", getMyConnections);
-router.post("/:alumniId", sendConnectionRequest);
-router.patch("/:connectionId", updateConnectionRequest);
+router.get("/", asyncHandler(getMyConnections));
+router.post("/:alumniId", asyncHandler(sendConnectionRequest));
+router.patch("/:connectionId", asyncHandler(updateConnectionRequest));
 
 module.exports = router;

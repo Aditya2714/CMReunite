@@ -5,14 +5,9 @@ import { useLoggedIn } from "../services/authService";
 import NotLoggedIn from "./helper/NotLoggedIn";
 
 const requiredColumns = [
-  "email",
-  "firstName",
-  "lastName",
-  "startYear",
-  "endYear",
-  "degree",
-  "branch",
-  "rollNumber",
+  "Name",
+  "Graduating year",
+  "email id",
 ];
 
 const BulkUpload = () => {
@@ -33,7 +28,7 @@ const BulkUpload = () => {
     event.preventDefault();
 
     if (!selectedFile) {
-      setError("Please choose a CSV file first.");
+      setError("Please choose an XLSX workbook or CSV file first.");
       return;
     }
 
@@ -73,9 +68,8 @@ const BulkUpload = () => {
               Bulk import alumni records.
             </h1>
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300 md:text-base">
-              Upload CSV files exported from Google Forms, Google
-              Sheets, or Microsoft Excel. The records will be converted into
-              import rows and added directly to Users and Alumni collections.
+              Upload the department-wise monthly alumni workbook. Each sheet is
+              matched to its department and valid rows are added to the alumni directory.
             </p>
           </div>
 
@@ -94,7 +88,7 @@ const BulkUpload = () => {
                     Upload import file
                   </h2>
                   <p className="text-sm font-semibold text-slate-500">
-                    Supported format: `.csv`.
+                    Supported formats: `.xlsx` and `.csv`.
                   </p>
                 </div>
               </div>
@@ -105,7 +99,7 @@ const BulkUpload = () => {
                 </span>
                 <input
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   className={inputClass}
                   onChange={handleFileChange}
                 />
@@ -150,13 +144,15 @@ const BulkUpload = () => {
                 ))}
               </div>
               <p className="mt-5 text-sm font-semibold leading-6 text-slate-500">
-                A password of at least 8 characters is required. Optional
-                profile columns include company, designation, and location.
+                Use one department per sheet, such as CSE, ECE, or ISE. The
+                department is taken from the sheet name. Optional columns are
+                Contact information, LinkedIn Profile link, Current working
+                designation, Employee/Entreprenur Details, and Address Details.
               </p>
               <p className="mt-3 flex items-center gap-2 text-sm font-semibold leading-6 text-slate-500">
                 <FaFileCsv className="text-blue-700" />
-                Google Form responses can be downloaded as CSV and
-                uploaded here directly.
+                Accounts without a password receive a secure temporary password
+                and must use Forgot password before their first login.
               </p>
 
               {result && (
@@ -189,7 +185,7 @@ const BulkUpload = () => {
                           key={`${item.line}-${item.reason}`}
                           className="text-sm font-semibold text-slate-500"
                         >
-                          Line {item.line}: {item.reason}
+                          {item.sheet ? `${item.sheet}, ` : ""}Line {item.line}: {item.reason}
                           {item.email ? ` (${item.email})` : ""}
                         </p>
                       ))}

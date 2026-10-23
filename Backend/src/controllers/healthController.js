@@ -15,7 +15,7 @@ const getHealth = async (req, res) => {
   }
   const healthy = database === "connected";
   return res.status(healthy ? 200 : 503).json({
-    status: healthy ? "ok" : "degraded",
+    status: healthy && mlService === "connected" ? "ok" : "degraded",
     service: "alumni-connect-backend",
     version: process.env.APP_VERSION || "development",
     database,

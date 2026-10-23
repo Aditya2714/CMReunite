@@ -7,8 +7,9 @@ const { notify } = require("../services/notificationService");
 const { emitToUser } = require("../services/realtimeService");
 
 const pageOptions = (req, max = 50) => {
-  const page = Math.max(Number(req.query.page) || 1, 1);
-  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), max);
+  const parse = (value, fallback, upper) => { if (value === undefined) return fallback; if (typeof value !== "string" || !/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) > upper) throw Object.assign(new Error("Invalid pagination"), { status: 400 }); return Number(value); };
+  const page = parse(req.query.page, 1, 100000);
+  const limit = parse(req.query.limit, 20, max);
   return { page, limit, skip: (page - 1) * limit };
 };
 
@@ -61,14 +62,14 @@ const getMessages = async (req, res) => {
 
 const sendMessage = async (req, res) => {
   const recipientId = req.body.recipientId;
-  const body = String(req.body.body || "").trim();
-  if (!mongoose.isValidObjectId(recipientId) || !body) {
-    return res.status(400).json({ status: "fail", message: "Valid recipientId and message are required" });
+  const body = typeof req.body.body === "string" ? req.body.body.trim() : "";
+  if (typeof recipientId !== "string" || !/^[a-f0-9]{24}$/i.test(recipientId) || !body || body.length > 2000) {
+    return res.status(400).json({ status: "fail", message: "Valid recipientId and a message of 1–2,000 characters are required" });
   }
   if (String(recipientId) === String(req.user._id)) {
     return res.status(400).json({ status: "fail", message: "You cannot message yourself" });
   }
-  const recipient = await User.findById(recipientId).select("_id privacy blockedUsers");
+  const recipient = await User.findOne({ _id: recipientId, role: "alumni", isActive: { $ne: false }, isApproved: true, approvalStatus: { $nin: ["pending", "rejected"] } }).select("_id privacy blockedUsers");
   if (!recipient) return res.status(404).json({ status: "fail", message: "Recipient not found" });
   const eitherBlocked =
     req.user.blockedUsers?.some((id) => id.toString() === recipientId) ||
@@ -104,7 +105,7 @@ const sendMessage = async (req, res) => {
   conversation.lastMessageAt = message.createdAt;
   await conversation.save();
   const payload = { message, conversationId: conversation._id };
-  emitToUser(recipient._id, "message:new", payload);
+  try { emitToUser(recipient._id, "message:new", payload); } catch (error) { require("../utils/operationalLog").failure("message.realtime_failed", error, { recordId: message._id }); }
   await notify({
     recipient: recipient._id,
     type: "message",

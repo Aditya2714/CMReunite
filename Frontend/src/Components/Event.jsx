@@ -20,10 +20,16 @@ const emptyEventForm = {
   description: "",
   capacity: 100,
   registrationDeadline: "",
+  eligibility: "department",
+  department: "",
+  scope: "department",
 };
 
 const formatEventForUi = (event) => ({
   id: event._id,
+  scope: event.scope,
+  department: event.department,
+  eligibility: event.eligibility,
   rawDate: event.date ? event.date.slice(0, 10) : "",
   title: event.title,
   date: new Date(event.date).toLocaleDateString("en-IN", {
@@ -50,7 +56,9 @@ const formatEventForUi = (event) => ({
 
 function Event() {
   const user = useCurrentUser() || {};
-  const isAdmin = user.role === "admin";
+  const isAdmin = ["admin", "super_admin"].includes(user.role);
+  const [departments, setDepartments] = useState([]);
+  useEffect(() => { api.get("/departments").then((response) => setDepartments(response.data.data.departments)).catch(() => {}); }, []);
   const [eventForm, setEventForm] = useState(emptyEventForm);
   const [events, setEvents] = useState([]);
   const [editingEventId, setEditingEventId] = useState(null);
@@ -98,7 +106,7 @@ function Event() {
 
     try {
       if (editingEventId) {
-        const response = await api.patch(`/event/${editingEventId}`, eventForm);
+        const response = await api.patch(`/event/${editingEventId}`, Object.fromEntries(Object.entries(eventForm).filter(([key]) => !["department", "scope"].includes(key))));
         const updatedEvent = formatEventForUi(response.data.data.event);
         setEvents((current) =>
           current.map((item) =>
@@ -116,13 +124,16 @@ function Event() {
       setEventForm(emptyEventForm);
       setEditingEventId(null);
     } catch (error) {
-      console.error("Event save failed:", error);
+      setMessage(error.response?.data?.message || "Unable to save event.");
     }
   };
 
   const handleEditEvent = (event) => {
     setEditingEventId(event.id);
     setEventForm({
+      scope: event.scope,
+      department: event.department || "",
+      eligibility: event.eligibility,
       title: event.title,
       date: event.rawDate,
       time: event.time,
@@ -237,6 +248,10 @@ function Event() {
               </div>
             </div>
 
+            <div className="mb-4 grid gap-3 md:grid-cols-2">
+              {user.role === "super_admin" && <><label>Event scope<select aria-label="Event scope" name="scope" disabled={!!editingEventId} value={eventForm.scope} onChange={handleEventFormChange} className={inputClass}><option value="department">Department</option><option value="platform">Platform-wide</option></select></label>{eventForm.scope === "department" && <label>Owning department<select aria-label="Owning department" name="department" disabled={!!editingEventId} value={eventForm.department} onChange={handleEventFormChange} required className={inputClass}><option value="">Select department</option>{departments.map((department) => <option key={department._id} value={department._id}>{department.code}</option>)}</select></label>}</>}
+              {eventForm.scope !== "platform" && <label>Attendance eligibility<select aria-label="Attendance eligibility" name="eligibility" value={eventForm.eligibility} onChange={handleEventFormChange} className={inputClass}><option value="department">Owning department only</option><option value="all">All departments</option></select></label>}
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <input
                 name="title"
@@ -258,6 +273,7 @@ function Event() {
                 <option>Mentorship Session</option>
               </select>
               <input
+                aria-label="Event date"
                 name="date"
                 type="date"
                 value={eventForm.date}

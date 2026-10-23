@@ -28,7 +28,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    Alumni["Alumni user"] -->|profiles, searches, workflow requests| System["CMReunite"]
+    Alumni["Alumni user"] -->|profiles, searches, workflow requests| System["CMRunite"]
     System -->|matches, messages, statuses, notifications| Alumni
     Admin["Administrator"] -->|verification, content, moderation| System
     System -->|reports, queues, analytics| Admin

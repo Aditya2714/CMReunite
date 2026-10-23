@@ -18,10 +18,10 @@ const notificationSchema = new mongoose.Schema(
     readAt: Date,
     metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
-  { timestamps: true }
+  { timestamps: true, autoIndex: false }
 );
 
 notificationSchema.index({ recipient: 1, readAt: 1, createdAt: -1 });
-notificationSchema.index({ recipient: 1, "metadata.reminderKey": 1 }, { unique: true, sparse: true });
+notificationSchema.index({ recipient: 1, "metadata.reminderKey": 1 }, { unique: true, name: "recipient_reminder_key_unique", partialFilterExpression: { "metadata.reminderKey": { $type: "string" } } });
 
 module.exports = mongoose.model("Notification", notificationSchema);

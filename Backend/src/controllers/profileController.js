@@ -8,8 +8,20 @@ const EventRegistration = require("../models/eventRegistrationModel");
 const Conversation = require("../models/conversationModel");
 const Message = require("../models/messageModel");
 
+const ADMIN_DESIGNATIONS = new Set([
+  "",
+  "Head of Department",
+  "Professor",
+  "Associate Professor",
+  "Assistant Professor",
+  "Placement Officer",
+  "Department Coordinator",
+  "Administrative Staff",
+  "Other",
+]);
+
 const getProfileModel = (role) => {
-  if (role === "admin") return Admin;
+  if (["admin", "super_admin"].includes(role)) return Admin;
   if (role === "alumni") return Alumni;
   return null;
 };
@@ -28,6 +40,9 @@ const getMyProfile = async (req, res) => {
   try {
     const ProfileModel = getProfileModel(req.user.role);
     const profile = ProfileModel ? await ProfileModel.findOne({ user: req.user._id }) : null;
+    if (["admin", "super_admin"].includes(req.user.role)) {
+      await req.user.populate("department", "code name");
+    }
 
     return res.status(200).json({
       status: "success",
@@ -36,8 +51,8 @@ const getMyProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching profile:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("profileController.failed", error);
+    throw error;
   }
 };
 
@@ -49,6 +64,20 @@ const updateMyProfile = async (req, res) => {
       return res.status(400).json({ status: "fail", message: "Profile role is not supported" });
     }
 
+    if (["role", "department", "branch", "isActive", "mustChangePassword"].some((key) => req.body[key] !== undefined)) return res.status(403).json({ status: "fail", message: "Role and department changes require Super Admin" });
+    if (["admin", "super_admin"].includes(req.user.role)) {
+      const designation = String(req.body.officialDesignation || "").trim();
+      const customDesignation = String(req.body.customDesignation || "").trim();
+      if (!ADMIN_DESIGNATIONS.has(designation)) {
+        return res.status(400).json({ status: "fail", message: "Select a valid official designation" });
+      }
+      if (designation === "Other" && !customDesignation) {
+        return res.status(400).json({ status: "fail", message: "Enter the custom official designation" });
+      }
+      if (customDesignation.length > 100) {
+        return res.status(400).json({ status: "fail", message: "Custom designation cannot exceed 100 characters" });
+      }
+    }
     const allowedUserFields = ["name", "email"];
     const userUpdates = {};
     allowedUserFields.forEach((field) => {
@@ -62,14 +91,22 @@ const updateMyProfile = async (req, res) => {
     }
 
     const allowedProfileFields =
-      req.user.role === "admin"
-        ? ["adminName", "email", "imageUrl", "fileType", "originalFileName"]
+      ["admin", "super_admin"].includes(req.user.role)
+        ? [
+            "adminName",
+            "email",
+            "mobileNumber",
+            "officialDesignation",
+            "customDesignation",
+            "imageUrl",
+            "fileType",
+            "originalFileName",
+          ]
         : [
             "email",
             "startYear",
             "endYear",
             "degree",
-            "branch",
             "rollNumber",
             "firstName",
             "lastName",
@@ -93,6 +130,13 @@ const updateMyProfile = async (req, res) => {
     });
 
     if (req.body.phone !== undefined) profileUpdates.mobileNumber = req.body.phone;
+    if (
+      ["admin", "super_admin"].includes(req.user.role) &&
+      req.body.officialDesignation !== undefined &&
+      req.body.officialDesignation !== "Other"
+    ) {
+      profileUpdates.customDesignation = "";
+    }
     Object.assign(profileUpdates, buildFileUpdates(req));
 
     let profile = await ProfileModel.findOne({ user: req.user._id });
@@ -115,8 +159,11 @@ const updateMyProfile = async (req, res) => {
       profileUpdates,
       { new: true, runValidators: true }
     );
-    const updatedUser = await req.user.constructor.findById(req.user._id);
+    const updatedUser = await req.user.constructor
+      .findById(req.user._id)
+      .populate("department", "code name");
 
+    require("../services/discoveryPolicy").invalidateDiscovery();
     return res.status(200).json({
       status: "success",
       data: {
@@ -124,8 +171,8 @@ const updateMyProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error updating profile:", error);
-    return res.status(500).json({ status: "fail", message: error.message || "Internal Server Error" });
+    require("../utils/operationalLog").failure("profileController.failed", error);
+    throw error;
   }
 };
 
@@ -150,9 +197,10 @@ const updatePrivacySettings = async (req, res) => {
       new: true,
       runValidators: true,
     });
+    require("../services/discoveryPolicy").invalidateDiscovery();
     return res.status(200).json({ status: "success", data: { privacy: user.privacy } });
   } catch (error) {
-    return res.status(400).json({ status: "fail", message: error.message || "Invalid privacy settings" });
+    throw error;
   }
 };
 
@@ -167,6 +215,7 @@ const updateBlockedUser = async (req, res) => {
     ? { $pull: { blockedUsers: target._id } }
     : { $addToSet: { blockedUsers: target._id } };
   await req.user.constructor.findByIdAndUpdate(req.user._id, operation);
+  require("../services/discoveryPolicy").invalidateDiscovery();
   return res.status(200).json({
     status: "success",
     message: req.method === "DELETE" ? "User unblocked" : "User blocked",
@@ -194,7 +243,7 @@ const exportMyData = async (req, res) => {
     conversations,
   };
   res.setHeader("Content-Type", "application/json");
-  res.setHeader("Content-Disposition", `attachment; filename="cmreunite-my-data-${Date.now()}.json"`);
+  res.setHeader("Content-Disposition", `attachment; filename="cmrunite-my-data-${Date.now()}.json"`);
   return res.status(200).send(JSON.stringify(payload, null, 2));
 };
 

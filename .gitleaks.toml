@@ -1,0 +1,5 @@
+[extend]
+useDefault = true
+[allowlist]
+description = "Generated dependencies, build artifacts and disposable fixture sessions"
+paths = ['''(^|/)node_modules/''', '''(^|/)\.venv/''', '''(^|/)dist/''', '''(^|/)test-results[^/]*/''', '''(^|/)playwright-report/''', '''full-project-auth-cache\.json$''']

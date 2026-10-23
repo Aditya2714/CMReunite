@@ -25,7 +25,8 @@ const logout = async (req, res) => {
   } catch {
     // Always clear an invalid or expired cookie.
   }
-  res.clearCookie("jwt", cookieOptions());
+  res.clearCookie("jwt", { ...cookieOptions(), maxAge: undefined });
+  require("../middlewares/csrf").rotate(res);
   return res.status(200).json({
     status: "success",
     message: "Logged out successfully",
@@ -41,13 +42,18 @@ const changePassword = async (req, res) => {
     return res.status(400).json({ status: "fail", message: "New password must be different" });
   }
   user.password = req.body.newPassword;
+  require("../services/realtimeService").disconnectUser(user._id);
   user.passwordChangedAt = new Date();
+  user.mustChangePassword = false;
+  user.authVersion = (user.authVersion || 0) + 1;
   await user.save();
   await AuthSession.updateMany(
-    { user: user._id, tokenId: { $ne: req.auth?.jti }, revokedAt: null },
+    { user: user._id, revokedAt: null },
     { revokedAt: new Date() }
   );
-  return res.status(200).json({ status: "success", message: "Password changed. Other sessions were signed out." });
+  res.clearCookie("jwt", { ...cookieOptions(), maxAge: undefined });
+  require("../middlewares/csrf").rotate(res);
+  return res.status(200).json({ status: "success", message: "Password changed. Sign in again.", requiresLogin: true });
 };
 
 const forgotPassword = async (req, res) => {
@@ -55,7 +61,7 @@ const forgotPassword = async (req, res) => {
     status: "success",
     message: "If an approved account exists, password-reset instructions have been sent.",
   };
-  const user = await User.findOne({ email: req.body.email.toLowerCase(), isApproved: true });
+  const user = await User.findOne({ email: req.body.email.toLowerCase(), isApproved: true, isActive: { $ne: false } });
   if (!user) return res.status(200).json(response);
   const token = crypto.randomBytes(32).toString("hex");
   user.passwordResetTokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -71,9 +77,12 @@ const resetPassword = async (req, res) => {
     passwordResetTokenHash: tokenHash,
     passwordResetExpiresAt: { $gt: new Date() },
   }).select("+passwordResetTokenHash +passwordResetExpiresAt");
-  if (!user) return res.status(400).json({ status: "fail", message: "Reset link is invalid or expired" });
+  if (!user || user.isActive === false) return res.status(400).json({ status: "fail", message: "Reset link is invalid or expired" });
   user.password = req.body.newPassword;
+  require("../services/realtimeService").disconnectUser(user._id);
   user.passwordChangedAt = new Date();
+  user.mustChangePassword = false;
+  user.authVersion = (user.authVersion || 0) + 1;
   user.passwordResetTokenHash = undefined;
   user.passwordResetExpiresAt = undefined;
   await user.save();
@@ -105,13 +114,17 @@ const revokeSession = async (req, res) => {
     { new: true }
   );
   if (!session) return res.status(404).json({ status: "fail", message: "Session not found" });
-  if (session.tokenId === req.auth?.jti) res.clearCookie("jwt", cookieOptions());
+  if (session.tokenId === req.auth?.jti) res.clearCookie("jwt", { ...cookieOptions(), maxAge: undefined });
+  require("../middlewares/csrf").rotate(res);
   return res.status(200).json({ status: "success", message: "Session signed out" });
 };
 
 const logoutAll = async (req, res) => {
+  require("../services/realtimeService").disconnectUser(req.user._id);
+  await User.updateOne({ _id: req.user._id }, { $inc: { authVersion: 1 } });
   await AuthSession.updateMany({ user: req.user._id, revokedAt: null }, { revokedAt: new Date() });
-  res.clearCookie("jwt", cookieOptions());
+  res.clearCookie("jwt", { ...cookieOptions(), maxAge: undefined });
+  require("../middlewares/csrf").rotate(res);
   return res.status(200).json({ status: "success", message: "Signed out from every device" });
 };
 

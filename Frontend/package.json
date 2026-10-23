@@ -9,7 +9,13 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:directory": "playwright test --config playwright.directory.config.js",
+    "test:e2e:community": "playwright test --config playwright.community.config.js",
+    "test:e2e:placement": "playwright test --config playwright.placement.config.js",
+    "test:e2e:rejection": "playwright test --config playwright.rejection.config.js",
+    "test:e2e:super-admin": "playwright test --config playwright.super-admin.config.js",
+    "test:e2e:full-project": "playwright test --config playwright.full-project.config.js"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
@@ -30,16 +36,19 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.16",
+    "@vitejs/plugin-react": "^6.1.2",
     "eslint": "^8.55.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1",
-    "vite": "^5.0.8"
+    "postcss": "^8.5.30",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.4"
+  },
+  "engines": {
+    "node": ">=24 <25"
   }
 }

@@ -1,0 +1,191 @@
+# Standalone production reference. Never combine with the legacy development compose.
+x-logs: &logs
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+x-runtime: &runtime
+  restart: unless-stopped
+  logging: *logs
+  security_opt: ["no-new-privileges:true"]
+  stop_grace_period: 35s
+services:
+  mongodb:
+    <<: *runtime
+    image: ${MONGODB_IMAGE:-cmrunite-mongodb:local}
+    build: { context: ., dockerfile: deploy/MongoRuntime.Dockerfile }
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: cm_root
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongo_root_password
+    secrets: [mongo_root_password, mongo_app_password, mongo_ml_password]
+    volumes:
+      - alumni_mongodb:/data/db
+      - ./deploy/mongo-init.js:/docker-entrypoint-initdb.d/users.js:ro
+    networks: [data]
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+  ml-service:
+    <<: *runtime
+    image: ${ML_IMAGE:-cmrunite-ml:local}
+    build: ./ML-Service
+    environment:
+      MONGO_URI_FILE: /run/secrets/ml_uri
+      DB_NAME: alumniDB
+      CORS_ORIGIN: ${PUBLIC_ORIGIN:?Set public origin}
+    secrets: [ml_uri]
+    networks: [app, data]
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+    depends_on:
+      mongodb: { condition: service_healthy }
+  backend:
+    <<: *runtime
+    image: ${BACKEND_IMAGE:-cmrunite-backend:local}
+    build: ./Backend
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4000
+      LOCAL_PRODUCTION_QA: ${LOCAL_PRODUCTION_QA:-false}
+      FRONTEND_URL: ${PUBLIC_ORIGIN}
+      PUBLIC_API_URL: ${PUBLIC_ORIGIN}
+      CORS_ORIGIN: ${PUBLIC_ORIGIN}
+      TRUST_PROXY: ${APP_SUBNET:-172.28.20.0/24}
+      MONGODB_URI_FILE: /run/secrets/app_uri
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      CSRF_SECRET_FILE: /run/secrets/csrf_secret
+      ML_SERVICE_URL: http://ml-service:5001
+      MONITOR_TOKEN_FILE: /run/secrets/monitor_token
+      APP_VERSION: ${APP_VERSION:-local-preparation}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS_FILE: /run/secrets/smtp_password
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_REQUIRE_TLS: "true"
+      PLACEMENT_JOB_EMAIL_ENABLED: ${PLACEMENT_JOB_EMAIL_ENABLED:-false}
+      PLACEMENT_OFFICE_EMAIL: ${PLACEMENT_OFFICE_EMAIL:-}
+    secrets: [app_uri, jwt_secret, csrf_secret, smtp_password, monitor_token]
+    volumes: ["alumni_uploads:/app/public/uploads"]
+    networks: [app, data]
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:4000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+    depends_on:
+      mongodb: { condition: service_healthy }
+      ml-service: { condition: service_started }
+  frontend:
+    <<: *runtime
+    image: ${FRONTEND_IMAGE:-cmrunite-frontend:local}
+    build: ./Frontend
+    environment:
+      EDGE_SUBNET: ${EDGE_SUBNET:-172.28.10.0/24}
+    networks: [edge, app]
+    mem_limit: 256m
+    cpus: 0.5
+    depends_on:
+      backend: { condition: service_healthy }
+  edge:
+    <<: *runtime
+    image: ${EDGE_IMAGE:-cmrunite-edge:local}
+    build: { context: ., dockerfile: deploy/Caddy.Dockerfile }
+    environment: { PUBLIC_HOST: "${PUBLIC_HOST:?Set domain}" }
+    ports: ["80:8080", "443:8443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on: [frontend]
+    mem_limit: 256m
+    cpus: 0.5
+  monitor:
+    <<: *runtime
+    build: { context: ., dockerfile: deploy/Monitor.Dockerfile }
+    image: cmrunite-monitor:local
+    environment:
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      LOCAL_PRODUCTION_QA: ${LOCAL_PRODUCTION_QA:-false}
+    secrets: [monitor_token]
+    volumes:
+      - ./deploy/monitor.py:/monitor.py:ro
+      - monitor_state:/state
+      - ${DEPLOY_STATE_DIR:?Set deployment state directory}:/backup-status:ro
+      - ${BACKUP_REPOSITORY}:/backups:ro
+    networks: [app]
+    depends_on: [backend]
+
+  mongo-tools:
+    image: ${MONGO_TOOLS_IMAGE:-cmrunite-mongo-tools:local}
+    build: { context: ., dockerfile: deploy/MongoTools.Dockerfile }
+    profiles: [tools]
+    secrets: [mongo_backup_config, mongo_root_password]
+    volumes:
+      - backup_stage:/snapshot
+    networks: [data]
+    entrypoint: []
+  mongo-check:
+    image: ${BACKEND_IMAGE:-cmrunite-backend:local}
+    profiles: [tools]
+    environment:
+      MONGO_BACKUP_CONFIG_FILE: /run/secrets/mongo_backup_config
+    secrets: [mongo_backup_config]
+    volumes:
+      - ./deploy/mongo-empty-node.js:/app/scripts/mongo-empty-node.js:ro
+    networks: [data]
+    entrypoint: []
+  backup:
+    image: ${BACKUP_IMAGE:-cmrunite-backup:local}
+    build: { context: ., dockerfile: deploy/Restic.Dockerfile }
+    profiles: [tools]
+    environment:
+      RESTIC_REPOSITORY: /repository
+      RESTIC_PASSWORD_FILE: /run/secrets/backup_password
+    secrets: [backup_password]
+    volumes:
+      - ${BACKUP_REPOSITORY:?Set external backup directory}:/repository
+      - backup_stage:/snapshot
+      - alumni_uploads:/snapshot/uploads:ro
+  file-tools:
+    image: alpine:3
+    profiles: [tools]
+    volumes: ["backup_stage:/snapshot", "alumni_uploads:/uploads"]
+networks:
+  edge:
+    ipam: { config: [{ subnet: "${EDGE_SUBNET:-172.28.10.0/24}" }] }
+  app:
+    ipam: { config: [{ subnet: "${APP_SUBNET:-172.28.20.0/24}" }] }
+  data:
+    internal: true
+    ipam: { config: [{ subnet: "${DATA_SUBNET:-172.28.30.0/24}" }] }
+volumes:
+  alumni_mongodb:
+  alumni_uploads:
+  caddy_data:
+  caddy_config:
+  backup_stage:
+  monitor_state:
+secrets:
+  monitor_token: { file: "${SECRETS_DIR}/monitor_token" }
+  mongo_root_password: { file: "${SECRETS_DIR}/mongo_root_password" }
+  mongo_app_password: { file: "${SECRETS_DIR}/mongo_app_password" }
+  mongo_ml_password: { file: "${SECRETS_DIR}/mongo_ml_password" }
+  app_uri: { file: "${SECRETS_DIR}/app_uri" }
+  ml_uri: { file: "${SECRETS_DIR}/ml_uri" }
+  jwt_secret: { file: "${SECRETS_DIR}/jwt_secret" }
+  csrf_secret: { file: "${SECRETS_DIR}/csrf_secret" }
+  smtp_password: { file: "${SECRETS_DIR}/smtp_password" }
+  mongo_backup_config: { file: "${SECRETS_DIR}/mongo_backup_config" }
+  backup_password: { file: "${SECRETS_DIR}/backup_password" }

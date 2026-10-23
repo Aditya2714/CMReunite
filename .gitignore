@@ -3,8 +3,6 @@
 node_modules/
 dist/
 
-.env
-Backend/.env
 Backend/public/uploads/
 
 *.log
@@ -16,4 +14,19 @@ __pycache__/
 playwright-report/
 test-results/
 
-/tmp/
+# Disposable Playwright fixture authentication only
+Frontend/full-project-auth-cache.json
+
+# Deployment credentials and private recovery data
+.env
+.env.*
+!.env.sample
+!.env.*.example
+.secrets/
+.backups/
+*.pem
+*.key
+Backend/department-mapping.reviewed.json
+
+*.private.env
+test-results-*/

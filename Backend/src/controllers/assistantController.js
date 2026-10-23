@@ -67,17 +67,7 @@ const queryAssistant = async (req, res) => {
       return res.status(400).json({ status: "fail", message: "Ask a more specific alumni question." });
     }
 
-    const visibleUsers = await User.find({
-      _id: { $ne: req.user._id, $nin: req.user.blockedUsers || [] },
-      blockedUsers: { $ne: req.user._id },
-      "privacy.profileVisibility": { $ne: "private" },
-      role: "alumni",
-      isApproved: true,
-    }).select("_id").lean();
-    const profiles = await Alumni.find({ user: { $in: visibleUsers.map((user) => user._id) } })
-      .select("user firstName lastName imageUrl branch endYear company designation domain location skills bio verified")
-      .limit(250)
-      .lean();
+    const profiles = (await require("../services/discoveryPolicy").visibleProfiles(req.user, { purpose: intent.mode === "mentor" ? "mentor" : intent.mode === "network" ? "connect" : "discovery" })).slice(0, 250);
 
     const ranked = profiles
       .map((profile) => ({ ...profile, ...scoreProfile(profile, intent) }))
@@ -102,8 +92,8 @@ const queryAssistant = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Assistant query failed:", error);
-    return res.status(500).json({ status: "fail", message: "Unable to search alumni right now." });
+    require("../utils/operationalLog").failure("assistantController.failed", error);
+    throw error;
   }
 };
 
@@ -124,7 +114,8 @@ const performAssistantAction = async (req, res) => {
     if (action !== "connect") {
       return res.status(400).json({ status: "fail", message: "Unsupported assistant action" });
     }
-    const profile = await Alumni.findById(targetProfileId).select("user firstName lastName");
+    if (!/^[a-f0-9]{24}$/i.test(String(targetProfileId))) return res.status(400).json({ status: "fail", message: "Invalid alumni ID" });
+    const profile = await require("../services/discoveryPolicy").requireVisibleProfile(req.user, targetProfileId, "connect");
     if (!profile || String(profile.user) === String(req.user._id)) {
       return res.status(400).json({ status: "fail", message: "Choose a valid alumni profile" });
     }
@@ -160,7 +151,7 @@ const performAssistantAction = async (req, res) => {
       data: { action: "connect", message: `Connection request sent to ${name}.` },
     });
   } catch (error) {
-    return res.status(500).json({ status: "fail", message: "Unable to complete the assistant action" });
+    throw error;
   }
 };
 

@@ -262,7 +262,7 @@ function ConnectionCard({ person, children }) {
 
 export function CareerReferrals() {
   const user = useCurrentUser() || {};
-  const isAdmin = user.role === "admin";
+  const isAdmin = ["admin", "super_admin"].includes(user.role);
   const [form, setForm] = useState({
     targetRole: "",
     company: "",
@@ -478,113 +478,6 @@ export function CareerReferrals() {
           )}
         </section>
       </div>
-    </FeatureShell>
-  );
-}
-
-export function AlumniStories() {
-  const [stories, setStories] = useState([]);
-  const [form, setForm] = useState({
-    title: "",
-    tag: "Career Journey",
-    content: "",
-  });
-  const [message, setMessage] = useState("");
-
-  const fetchStories = async () => {
-    try {
-      const response = await api.get("/community/stories");
-      setStories(response.data.data.stories);
-    } catch (error) {
-      setMessage(error.response?.data?.message || "Unable to load alumni stories.");
-    }
-  };
-
-  useEffect(() => {
-    fetchStories();
-  }, []);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!form.title.trim() || !form.content.trim()) {
-      setMessage("Please add story title and content.");
-      return;
-    }
-
-    try {
-      const response = await api.post("/community/stories", form);
-      setStories((current) => [response.data.data.story, ...current]);
-      setForm({ title: "", tag: "Career Journey", content: "" });
-      setMessage("Story published successfully.");
-    } catch (error) {
-      setMessage(error.response?.data?.message || "Unable to publish story.");
-    }
-  };
-
-  return (
-    <FeatureShell>
-      <PageHeader
-        eyebrow="Alumni stories"
-        title="Celebrate journeys from the CMRIT community."
-        description="Share career moves, startup lessons, higher-study paths, and achievements."
-      />
-      <form onSubmit={handleSubmit} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-        <h2 className="text-2xl font-extrabold text-slate-900">Share an alumni story</h2>
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <input
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            placeholder="Story title"
-            className={inputClass}
-          />
-          <select name="tag" value={form.tag} onChange={handleChange} className={inputClass}>
-            <option>Career Journey</option>
-            <option>Founder Story</option>
-            <option>Higher Studies</option>
-            <option>Achievement</option>
-            <option>Campus Memory</option>
-          </select>
-          <textarea
-            name="content"
-            value={form.content}
-            onChange={handleChange}
-            rows="4"
-            placeholder="Write the story or experience."
-            className={`${inputClass} md:col-span-2`}
-          />
-        </div>
-        <button type="submit" className="mt-4 inline-flex min-h-[46px] items-center justify-center gap-2 rounded-lg bg-blue-700 px-5 font-extrabold text-white">
-          <FaPaperPlane /> Publish Story
-        </button>
-      </form>
-      {message && (
-        <section className="rounded-lg bg-blue-50 p-4 text-sm font-bold text-blue-700">
-          {message}
-        </section>
-      )}
-      <div className="grid gap-4 md:grid-cols-3">
-        {stories.map((story) => (
-          <article key={story._id} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <span className="mb-4 inline-flex rounded-full bg-teal-50 px-3 py-1 text-xs font-extrabold text-teal-700">
-              {story.tag}
-            </span>
-            <h2 className="text-xl font-extrabold text-slate-900">{story.title}</h2>
-            <p className="mt-3 text-sm font-semibold text-slate-500">By {story.authorName}</p>
-            <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">{story.content}</p>
-          </article>
-        ))}
-      </div>
-      {!stories.length && (
-        <section className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm font-semibold text-slate-500">
-          No alumni stories posted yet.
-        </section>
-      )}
     </FeatureShell>
   );
 }
@@ -893,7 +786,7 @@ export function ResourceLibrary() {
 
 export function Contributions() {
   const user = useCurrentUser() || {};
-  const isAdmin = user.role === "admin";
+  const isAdmin = ["admin", "super_admin"].includes(user.role);
   const [campaigns, setCampaigns] = useState([]);
   const [campaignForm, setCampaignForm] = useState({
     title: "",
@@ -1089,7 +982,7 @@ export function Contributions() {
 
 export function RecognitionWall() {
   const user = useCurrentUser() || {};
-  const isAdmin = user.role === "admin";
+  const isAdmin = ["admin", "super_admin"].includes(user.role);
   const emptyRecognition = {
     name: "",
     achievement: "",

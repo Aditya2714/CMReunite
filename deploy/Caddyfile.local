@@ -1,0 +1,10 @@
+{
+  http_port 8080
+  https_port 8443
+}
+
+https://localhost {
+  tls internal
+  header Strict-Transport-Security "max-age=31536000"
+  reverse_proxy frontend:8080
+}

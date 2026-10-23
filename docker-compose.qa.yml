@@ -1,0 +1,11 @@
+# Opt-in disposable verification environment; use a unique Compose project name.
+services:
+  backend:
+    environment:
+      NODE_ENV: development
+      PUBLIC_API_URL: http://localhost:18080
+      FRONTEND_URL: http://localhost:18080
+      CORS_ORIGIN: http://localhost:18080
+  frontend:
+    ports: !override
+      - "127.0.0.1:18080:8080"

@@ -3,3 +3,7 @@ npm-debug.log
 .env
 coverage
 tests
+
+public/uploads
+.env.*
+*.private.env

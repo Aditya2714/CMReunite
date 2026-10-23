@@ -4,21 +4,7 @@ const User = require("../models/user");
 
 const getNetworkGraph = async (req, res) => {
   try {
-    const visibleUsers = await User.find({
-      $or: [
-        { _id: req.user._id },
-        {
-          _id: { $nin: req.user.blockedUsers || [] },
-          blockedUsers: { $ne: req.user._id },
-          "privacy.profileVisibility": { $ne: "private" },
-        },
-      ],
-    }).select("_id").lean();
-    const profiles = await Alumni.find({ user: { $in: visibleUsers.map((user) => user._id) } })
-      .select("user firstName lastName imageUrl branch endYear company designation location skills verified")
-      .sort({ verified: -1, updatedAt: -1 })
-      .limit(80)
-      .lean();
+    const profiles = (await require("../services/discoveryPolicy").visibleProfiles(req.user, { includeSelf: true })).sort((a, b) => Number(b.verified) - Number(a.verified) || new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 80);
     const connections = await Connection.find({
       status: "accepted",
       requester: { $in: profiles.map((profile) => profile.user) },
@@ -80,8 +66,8 @@ const getNetworkGraph = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Network graph failed:", error);
-    return res.status(500).json({ status: "fail", message: "Unable to build the alumni graph." });
+    require("../utils/operationalLog").failure("networkController.failed", error);
+    throw error;
   }
 };
 

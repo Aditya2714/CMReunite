@@ -1,7 +1,7 @@
 const Recognition = require("../models/recognitionModel");
 
 const requireAdmin = (req, res) => {
-  if (req.user.role !== "admin") {
+  if (!["admin", "super_admin"].includes(req.user.role)) {
     res.status(403).json({ status: "fail", message: "Admin access required" });
     return false;
   }
@@ -39,15 +39,18 @@ const createRecognition = async (req, res) => {
       category,
       ...buildFileUpdates(req),
       createdBy: req.user._id,
+      department: req.user.department,
+      scope: req.user.role === "super_admin" ? "platform" : "department",
     });
 
+    await require("../services/departmentAccess").audit(req.user, "recognition.created", recognition._id, recognition.department);
     return res.status(201).json({
       status: "success",
       data: { recognition },
     });
   } catch (error) {
-    console.error("Error creating recognition:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("recognitionController.failed", error);
+    throw error;
   }
 };
 
@@ -63,8 +66,8 @@ const getRecognitions = async (req, res) => {
       data: { recognitions },
     });
   } catch (error) {
-    console.error("Error fetching recognitions:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("recognitionController.failed", error);
+    throw error;
   }
 };
 
@@ -72,6 +75,7 @@ const updateRecognition = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
 
+    await require("../services/departmentAccess").assertOwnedDepartment(req.user, await Recognition.findById(req.params.id));
     const allowedFields = ["name", "achievement", "year", "batch", "category"];
     const updates = {};
     allowedFields.forEach((field) => {
@@ -89,13 +93,14 @@ const updateRecognition = async (req, res) => {
       return res.status(404).json({ status: "fail", message: "Recognition not found" });
     }
 
+    await require("../services/departmentAccess").audit(req.user, "recognition.updated", recognition._id, recognition.department);
     return res.status(200).json({
       status: "success",
       data: { recognition },
     });
   } catch (error) {
-    console.error("Error updating recognition:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("recognitionController.failed", error);
+    throw error;
   }
 };
 
@@ -103,19 +108,21 @@ const deleteRecognition = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
 
+    await require("../services/departmentAccess").assertOwnedDepartment(req.user, await Recognition.findById(req.params.id));
     const recognition = await Recognition.findByIdAndDelete(req.params.id);
 
     if (!recognition) {
       return res.status(404).json({ status: "fail", message: "Recognition not found" });
     }
 
+    await require("../services/departmentAccess").audit(req.user, "recognition.deleted", recognition._id, recognition.department);
     return res.status(200).json({
       status: "success",
       message: "Recognition deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting recognition:", error);
-    return res.status(500).json({ status: "fail", message: "Internal Server Error" });
+    require("../utils/operationalLog").failure("recognitionController.failed", error);
+    throw error;
   }
 };
 

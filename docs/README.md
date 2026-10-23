@@ -1,10 +1,10 @@
-# CMReunite final documentation package
+# CMRunite final documentation package
 
-This directory is the submission-ready documentation set for **CMReunite: An
+This directory is the submission-ready documentation set for **CMRunite: An
 Intelligent and Explainable Alumni Engagement Platform**.
 
 For the easiest reading experience, open the standalone offline handbook:
-[`../CMReunite-Complete-Project-Guide.html`](../CMReunite-Complete-Project-Guide.html).
+[`../CMRunite-Complete-Project-Guide.html`](../CMRunite-Complete-Project-Guide.html).
 It includes chapter navigation, full-text filtering and print-to-PDF styling.
 
 ## Document index

@@ -90,3 +90,7 @@ test("authenticated alumni can start a direct conversation", async ({ page }) =>
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("Hello from the alumni network")).toBeVisible();
 });
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/auth/csrf", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "success", data: { csrfToken: "mocked-ui-fixture" } }) }));
+});
