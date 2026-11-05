@@ -14,6 +14,7 @@
     "migrate:departments": "node scripts/migrateDepartments.js",
     "migrate:credentials": "node scripts/migrateCredentials.js",
     "seed:demo": "node scripts/seedDemoData.js",
+    "provision:deployment-demo": "node scripts/provisionDeploymentDemo.js",
     "migrate:notification-index": "node scripts/migrateNotificationIndex.js",
     "verify:email": "node scripts/verifyEmail.js"
   },
