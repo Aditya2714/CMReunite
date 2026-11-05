@@ -37,7 +37,17 @@ router.post("/recommendations", asyncHandler(async (req, res) => {
   if (cached) return res.json({ ...await revalidate(cached, req.user, mode), cached: true });
   const endpoint = algorithm === "knn" ? "/recommend/knn" : algorithm === "combined" ? "/recommend/combined" : "/recommend";
   try {
-    const response = await fetch(`${ML_SERVICE_URL}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: req.user._id, topN: normalizedTopN, mode }), signal: AbortSignal.timeout(8000) });
+    const response = await fetch(`${ML_SERVICE_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.ML_SERVICE_TOKEN
+          ? { "X-ML-Service-Token": process.env.ML_SERVICE_TOKEN }
+          : {}),
+      },
+      body: JSON.stringify({ userId: req.user._id, topN: normalizedTopN, mode }),
+      signal: AbortSignal.timeout(8000),
+    });
     if (!response.ok) throw Object.assign(new Error(), { code: "ML_UPSTREAM_ERROR" });
     const payload = await response.json();
     if (!Array.isArray(payload.data?.recommendations)) throw Object.assign(new Error(), { code: "ML_INVALID_RESPONSE" });

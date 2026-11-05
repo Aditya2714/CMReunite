@@ -90,6 +90,16 @@ const otpRoutes = require("./src/routes/otpRoutes");
 app.use("/", router);
 app.use("/otp", otpRoutes);
 
+// Render runs the React build and API on one origin. Serve the SPA only for
+// browser navigation requests; unknown API requests continue to the normal 404.
+const frontendIndex = path.join(__dirname, "public", "index.html");
+app.get("*", (req, res, next) => {
+  if (req.accepts("html") && require("node:fs").existsSync(frontendIndex)) {
+    return res.sendFile(frontendIndex);
+  }
+  return next();
+});
+
 app.use(require("./src/middlewares/asyncHandler").errorHandler);
 
 module.exports = app;

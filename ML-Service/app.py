@@ -1,4 +1,5 @@
 from discovery_policy import eligible, visible
+import hmac
 import logging
 import os
 import re
@@ -28,6 +29,18 @@ MAX_TOP_N = 50
 
 client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
 db = client[DB_NAME]
+
+
+@app.before_request
+def protect_recommendation_api():
+    if not request.path.startswith("/recommend"):
+        return None
+    expected = os.getenv("ML_SERVICE_TOKEN", "")
+    if expected and not hmac.compare_digest(
+        request.headers.get("X-ML-Service-Token", ""), expected
+    ):
+        return jsonify({"status": "fail", "message": "Authentication required"}), 401
+    return None
 
 MODE_WEIGHTS = {
     "network": {

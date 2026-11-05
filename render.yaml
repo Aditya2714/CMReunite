@@ -1,0 +1,84 @@
+envVarGroups:
+  - name: cmrunite-service-secrets
+    envVars:
+      - key: ML_SERVICE_TOKEN
+        generateValue: true
+
+services:
+  - type: web
+    name: cmrunite-aditya271431
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/RenderApp.Dockerfile
+    healthCheckPath: /health/ready
+    autoDeployTrigger: commit
+    envVars:
+      - fromGroup: cmrunite-service-secrets
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: APP_VERSION
+        value: render-demo
+      - key: LOCAL_PRODUCTION_QA
+        value: "false"
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: cmrunite-aditya271431
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: PUBLIC_API_URL
+        fromService:
+          type: web
+          name: cmrunite-aditya271431
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: cmrunite-aditya271431
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: MONGODB_URI
+        sync: false
+      - key: ML_SERVICE_URL
+        fromService:
+          type: web
+          name: cmrunite-ml-aditya271431
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: TRUST_PROXY
+        value: loopback,linklocal,uniquelocal
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CSRF_SECRET
+        generateValue: true
+      - key: MONITOR_TOKEN
+        generateValue: true
+      - key: PLACEMENT_JOB_EMAIL_ENABLED
+        value: "false"
+      - key: SMTP_REQUIRE_TLS
+        value: "true"
+
+  - type: web
+    name: cmrunite-ml-aditya271431
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: ML-Service
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 60 app:app
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - fromGroup: cmrunite-service-secrets
+      - key: MONGO_URI
+        fromService:
+          type: web
+          name: cmrunite-aditya271431
+          envVarKey: MONGODB_URI
+      - key: DB_NAME
+        value: alumniDB
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: cmrunite-aditya271431
+          envVarKey: RENDER_EXTERNAL_URL
