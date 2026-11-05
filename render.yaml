@@ -7,16 +7,19 @@ envVarGroups:
 services:
   - type: web
     name: cmrunite-aditya2714
-    runtime: docker
+    runtime: node
     plan: free
     region: singapore
-    dockerfilePath: ./deploy/RenderApp.Dockerfile
+    buildCommand: npm --prefix Backend ci --omit=dev && npm --prefix Frontend ci --include=dev && npm --prefix Frontend run build && cp -R Frontend/dist/. Backend/public/
+    startCommand: node Backend/server.js
     healthCheckPath: /health/ready
     autoDeployTrigger: commit
     envVars:
       - fromGroup: cmrunite-service-secrets
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "24"
       - key: HOST
         value: 0.0.0.0
       - key: APP_VERSION
