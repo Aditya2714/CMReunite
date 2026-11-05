@@ -6,7 +6,7 @@ envVarGroups:
 
 services:
   - type: web
-    name: cmrunite-aditya271431
+    name: cmrunite-aditya2714
     runtime: docker
     plan: free
     region: singapore
@@ -26,24 +26,24 @@ services:
       - key: FRONTEND_URL
         fromService:
           type: web
-          name: cmrunite-aditya271431
+          name: cmrunite-aditya2714
           envVarKey: RENDER_EXTERNAL_URL
       - key: PUBLIC_API_URL
         fromService:
           type: web
-          name: cmrunite-aditya271431
+          name: cmrunite-aditya2714
           envVarKey: RENDER_EXTERNAL_URL
       - key: CORS_ORIGIN
         fromService:
           type: web
-          name: cmrunite-aditya271431
+          name: cmrunite-aditya2714
           envVarKey: RENDER_EXTERNAL_URL
       - key: MONGODB_URI
         sync: false
       - key: ML_SERVICE_URL
         fromService:
           type: web
-          name: cmrunite-ml-aditya271431
+          name: cmrunite-ml-aditya2714
           envVarKey: RENDER_EXTERNAL_URL
       - key: TRUST_PROXY
         value: loopback,linklocal,uniquelocal
@@ -59,7 +59,7 @@ services:
         value: "true"
 
   - type: web
-    name: cmrunite-ml-aditya271431
+    name: cmrunite-ml-aditya2714
     runtime: python
     plan: free
     region: singapore
@@ -73,12 +73,12 @@ services:
       - key: MONGO_URI
         fromService:
           type: web
-          name: cmrunite-aditya271431
+          name: cmrunite-aditya2714
           envVarKey: MONGODB_URI
       - key: DB_NAME
         value: alumniDB
       - key: CORS_ORIGIN
         fromService:
           type: web
-          name: cmrunite-aditya271431
+          name: cmrunite-aditya2714
           envVarKey: RENDER_EXTERNAL_URL
